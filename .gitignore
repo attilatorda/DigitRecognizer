@@ -1,0 +1,21 @@
+# Python cache
+__pycache__/
+*.pyc
+
+# Virtual environments
+.venv/
+venv/
+
+# Data and artifacts
+data/
+mnist_data/
+*.npz
+*.pt
+
+# Experiment outputs
+experiments/checkpoints/
+experiments/logs/
+
+# Keep reports/configs tracked
+!experiments/reports/
+!experiments/configs/

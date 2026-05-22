@@ -1,0 +1,16 @@
+LABEL_TO_ID_14 = {
+    "0_plain": 0,
+    "0_crossed": 1,
+    "1_american": 2,
+    "1_european": 3,
+    "2": 4,
+    "3": 5,
+    "4_open": 6,
+    "4_closed": 7,
+    "5": 8,
+    "6": 9,
+    "7_crossed": 10,
+    "7_uncrossed": 11,
+    "8": 12,
+    "9": 13,
+}

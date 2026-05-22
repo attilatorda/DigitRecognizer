@@ -1,0 +1,7 @@
+mnist_path: mnist_data
+processed_dir: data/processed/mnist14_variants
+out_dir: experiments/checkpoints/variants14
+epochs: 5
+batch_size: 128
+lr: 0.001
+seed: 42

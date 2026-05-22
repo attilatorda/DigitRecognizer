@@ -1,0 +1,6 @@
+mnist_path: mnist_data
+out_dir: experiments/checkpoints/skeleton
+epochs: 5
+batch_size: 128
+lr: 0.001
+seed: 42
