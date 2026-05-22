@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DigitRecognizer — Changes Summary & Reproduction Tutorial</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; line-height: 1.6; margin: 2rem auto; max-width: 980px; padding: 0 1rem; color: #111; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f4f4f4; padding: 0.15rem 0.35rem; border-radius: 4px; }
+    pre { background: #f4f4f4; padding: 0.8rem; border-radius: 6px; overflow-x: auto; }
+    hr { border: 0; border-top: 1px solid #ddd; margin: 1.5rem 0; }
+    .meta { color: #555; }
+  </style>
+</head>
+<body>
+  <p><a href="index.html">Reports Index</a> | <a href="skeleton_vs_local_analysis.html">Skeleton CNN vs Local CNN Analysis</a></p>
+  <h1>DigitRecognizer — Changes Summary &amp; Reproduction Tutorial</h1>
+  <p class="meta">Date: 2026-05-22</p>
+
+  <h2>1) What changed in this update</h2>
+  <p>This project was restructured from a single training script into a multi-track research workspace.</p>
+
+  <h3>New structure</h3>
+  <ul>
+    <li><code>legacy/main_numpy_mlp.py</code>
+      <ul>
+        <li>Preserved original NumPy MLP script (moved from previous <code>main.py</code>).</li>
+      </ul>
+    </li>
+    <li><code>src/common/</code>
+      <ul>
+        <li>Shared helpers:</li>
+        <li><code>data_io.py</code> (MNIST IDX loading)</li>
+        <li><code>utils.py</code> (seed setup, directory creation)</li>
+        <li><code>metrics.py</code></li>
+        <li><code>labels.py</code></li>
+      </ul>
+    </li>
+    <li><code>src/local_cnn/</code>
+      <ul>
+        <li><code>model.py</code> (SimpleCNN)</li>
+        <li><code>train_local_cnn.py</code> (standard grayscale CNN training on MNIST)</li>
+      </ul>
+    </li>
+    <li><code>src/baseline/</code>
+      <ul>
+        <li><code>run_baseline.py</code> (baseline runner, aligned with local CNN pipeline)</li>
+      </ul>
+    </li>
+    <li><code>src/novel_skeleton/</code>
+      <ul>
+        <li><code>skeletonize.py</code> (Zhang–Suen style thinning via <code>skimage.morphology.skeletonize</code>)</li>
+        <li><code>train_skeleton_cnn.py</code> (CNN training on skeletonized images)</li>
+      </ul>
+    </li>
+    <li><code>src/variants14/</code>
+      <ul>
+        <li><code>label_schema.py</code> (14-class schema)</li>
+        <li><code>generate_variants14.py</code> (build 14-class labels from MNIST)</li>
+        <li><code>train_variants14_cnn.py</code> (train CNN with 14 classes)</li>
+      </ul>
+    </li>
+    <li><code>experiments/configs/</code>
+      <ul>
+        <li><code>baseline.yaml</code>, <code>local_cnn.yaml</code>, <code>skeleton_cnn.yaml</code>, <code>variants14.yaml</code></li>
+      </ul>
+    </li>
+    <li><code>experiments/logs/</code>
+      <ul><li>Run logs from executed experiments.</li></ul>
+    </li>
+    <li><code>experiments/reports/</code>
+      <ul>
+        <li><code>skeleton_vs_local_analysis.md</code></li>
+        <li>this tutorial document.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <h3>Dependency file</h3>
+  <ul>
+    <li><code>requirements.txt</code> includes:</li>
+    <li><code>numpy</code>, <code>torch</code>, <code>torchvision</code>, <code>scikit-image</code>, <code>tqdm</code>, <code>matplotlib</code>, <code>scikit-learn</code>, <code>pyyaml</code></li>
+  </ul>
+
+  <hr />
+
+  <h2>2) Reproducing the results (step-by-step)</h2>
+
+  <h3>Prerequisites</h3>
+  <ul>
+    <li>Python 3.10+ (validated with Python 3.14 in the current environment)</li>
+    <li>Terminal in repository root:</li>
+  </ul>
+  <pre><code>d:/Developer/DigitRecognizer</code></pre>
+
+  <p>MNIST IDX files already present in:</p>
+  <pre><code>mnist_data/
+  train-images-idx3-ubyte
+  train-labels-idx1-ubyte
+  t10k-images-idx3-ubyte
+  t10k-labels-idx1-ubyte</code></pre>
+
+  <h3>Step 1 — Install dependencies</h3>
+  <pre><code>pip install -r requirements.txt</code></pre>
+
+  <h3>Step 2 — Run local grayscale CNN baseline</h3>
+  <pre><code>python -m src.local_cnn.train_local_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/local_cnn --epochs 5 --batch-size 128 --lr 0.001</code></pre>
+  <p>Expected artifact:</p>
+  <ul><li><code>experiments/checkpoints/local_cnn/best_local_cnn.pt</code></li></ul>
+
+  <h3>Step 3 — Run novel skeleton CNN experiment</h3>
+  <pre><code>python -m src.novel_skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5 --batch-size 128 --lr 0.001</code></pre>
+  <p>Expected artifact:</p>
+  <ul><li><code>experiments/checkpoints/skeleton/best_skeleton_cnn.pt</code></li></ul>
+
+  <h3>Step 4 — (Optional) Save logs while running</h3>
+  <p>PowerShell example:</p>
+  <pre><code>python -m src.novel_skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5 --batch-size 128 --lr 0.001 2&gt;&amp;1 | Tee-Object -FilePath experiments/logs/skeleton_run.log
+python -m src.local_cnn.train_local_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/local_cnn --epochs 5 --batch-size 128 --lr 0.001 2&gt;&amp;1 | Tee-Object -FilePath experiments/logs/local_run.log</code></pre>
+
+  <h3>Step 5 — Compare results</h3>
+  <p>Read:</p>
+  <ul>
+    <li><code>experiments/logs/skeleton_run.log</code></li>
+    <li><code>experiments/logs/local_run.log</code></li>
+    <li><code>experiments/reports/skeleton_vs_local_analysis.md</code></li>
+  </ul>
+
+  <p>Observed in this run:</p>
+  <ul>
+    <li>Skeleton best test accuracy: <strong>0.9778</strong></li>
+    <li>Local baseline best test accuracy: <strong>0.9911</strong></li>
+    <li>Gap: <strong>1.33 percentage points</strong></li>
+  </ul>
+
+  <hr />
+
+  <h2>3) Reproducing the 14-class variant workflow</h2>
+  <h3>Generate 14-class data from MNIST</h3>
+  <pre><code>python -m src.variants14.generate_variants14 --mnist-path mnist_data --out-dir data/processed/mnist14_variants</code></pre>
+
+  <h3>Train 14-class model</h3>
+  <pre><code>python -m src.variants14.train_variants14_cnn --data-dir data/processed/mnist14_variants --out-dir experiments/checkpoints/variants14 --epochs 5 --batch-size 128 --lr 0.001</code></pre>
+
+  <hr />
+
+  <h2>4) Troubleshooting</h2>
+  <ul>
+    <li><strong><code>ModuleNotFoundError: No module named 'torch'</code></strong>
+      <ul>
+        <li>Run <code>pip install -r requirements.txt</code> in the same Python environment used by VS Code.</li>
+      </ul>
+    </li>
+    <li><strong>Pylance unresolved import warnings</strong>
+      <ul>
+        <li>Ensure VS Code is using the interpreter where dependencies were installed.</li>
+      </ul>
+    </li>
+    <li><strong>PowerShell heredoc (<code>&lt;&lt;</code>) fails</strong>
+      <ul>
+        <li>Use <code>python -c "..."</code> or run a <code>.py</code> script file; bash heredoc syntax is not valid in default PowerShell/cmd flow.</li>
+      </ul>
+    </li>
+  </ul>
+
+  <hr />
+
+  <h2>5) Suggested next improvements</h2>
+  <ol>
+    <li>Use 2-channel input: original grayscale + skeleton.</li>
+    <li>Add morphological denoise before skeletonization.</li>
+    <li>Add confusion matrices for class-level error analysis.</li>
+    <li>Extend training to 15–25 epochs with LR scheduler.</li>
+  </ol>
+
+  <p><a href="index.html">Reports Index</a> | <a href="skeleton_vs_local_analysis.html">Skeleton CNN vs Local CNN Analysis</a></p>
+</body>
+</html>

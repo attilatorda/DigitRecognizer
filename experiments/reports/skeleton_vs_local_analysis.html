@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Skeleton CNN vs Local CNN (MNIST) — Experimental Analysis</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; line-height: 1.6; margin: 2rem auto; max-width: 900px; padding: 0 1rem; color: #111; }
+    h1, h2, h3 { line-height: 1.25; }
+    code { background: #f4f4f4; padding: 0.15rem 0.35rem; border-radius: 4px; }
+    pre { background: #f4f4f4; padding: 0.8rem; border-radius: 6px; overflow-x: auto; }
+    .meta { color: #555; }
+  </style>
+</head>
+<body>
+  <p><a href="index.html">Reports Index</a> | <a href="project_changes_and_repro_tutorial.html">Project Changes &amp; Reproduction Tutorial</a></p>
+  <h1>Skeleton CNN vs Local CNN (MNIST) — Experimental Analysis</h1>
+  <p class="meta">Date: 2026-05-22</p>
+
+  <h2>Setup</h2>
+  <ul>
+    <li>Dataset: MNIST from <code>mnist_data/</code></li>
+    <li>Model backbone: same <code>SimpleCNN</code> architecture</li>
+    <li>Epochs: 5</li>
+    <li>Batch size: 128</li>
+    <li>LR: 0.001</li>
+    <li>Runs:
+      <ul>
+        <li>Skeletonized input pipeline: <code>src.novel_skeleton.train_skeleton_cnn</code></li>
+        <li>Regular grayscale pipeline: <code>src.local_cnn.train_local_cnn</code></li>
+      </ul>
+    </li>
+  </ul>
+
+  <h2>Results</h2>
+
+  <h3>Skeleton CNN</h3>
+  <ul>
+    <li>Epoch 1: 0.9666</li>
+    <li>Epoch 2: 0.9722</li>
+    <li>Epoch 3: 0.9778</li>
+    <li>Epoch 4: 0.9771</li>
+    <li>Epoch 5: 0.9770</li>
+    <li><strong>Best test accuracy: 0.9778</strong></li>
+  </ul>
+
+  <h3>Local CNN (regular)</h3>
+  <ul>
+    <li>Epoch 1: 0.9800</li>
+    <li>Epoch 2: 0.9864</li>
+    <li>Epoch 3: 0.9892</li>
+    <li>Epoch 4: 0.9898</li>
+    <li>Epoch 5: 0.9911</li>
+    <li><strong>Best test accuracy: 0.9911</strong></li>
+  </ul>
+
+  <h2>Comparison</h2>
+  <ul>
+    <li>Absolute accuracy gap: <strong>0.0133</strong> (1.33 percentage points)</li>
+    <li>Relative gap vs local baseline: <strong>~1.34%</strong></li>
+  </ul>
+
+  <p>Interpretation:</p>
+  <ol>
+    <li>Skeletonization preserves enough shape information for strong performance (~97.8%).</li>
+    <li>Regular grayscale still performs better in this short run, likely because stroke thickness and grayscale cues contain additional discriminative information removed by thinning.</li>
+    <li>Skeleton model appears to plateau earlier (around epoch 3), while local CNN continues improving through epoch 5.</li>
+  </ol>
+
+  <h2>Recommendations (next iteration)</h2>
+  <ol>
+    <li><strong>Tune skeleton thresholding</strong> (currently fixed binarization at <code>&gt;30</code>).</li>
+    <li>Add <strong>morphological cleanup</strong> before thinning (remove speckles, close gaps).</li>
+    <li>Try <strong>2-channel input</strong>: <code>[original, skeleton]</code> to retain intensity + topology.</li>
+    <li>Train longer (e.g., 15–25 epochs with scheduler) for both models.</li>
+    <li>Add per-class confusion matrix to analyze where skeletonization helps/hurts most.</li>
+  </ol>
+
+  <h2>Artifacts</h2>
+  <ul>
+    <li>Logs:
+      <ul>
+        <li><code>experiments/logs/skeleton_run.log</code></li>
+        <li><code>experiments/logs/local_run.log</code></li>
+      </ul>
+    </li>
+    <li>Checkpoints:
+      <ul>
+        <li><code>experiments/checkpoints/skeleton/best_skeleton_cnn.pt</code></li>
+        <li><code>experiments/checkpoints/local_cnn/best_local_cnn.pt</code></li>
+      </ul>
+    </li>
+  </ul>
+
+  <p><a href="index.html">Reports Index</a> | <a href="project_changes_and_repro_tutorial.html">Project Changes &amp; Reproduction Tutorial</a></p>
+</body>
+</html>

@@ -3,13 +3,15 @@
 This repository is organized for multiple digit-recognition research tracks:
 
 1. **Baseline** (`src/baseline`) - quick reference pipeline.
-2. **Local CNN** (`src/local_cnn`) - your main local training setup.
+2. **Local CNN** (`src/local_cnn`) - primary local training setup.
 3. **Novel Skeleton CNN** (`src/novel_skeleton`) - Zhang-Suen style skeletonized inputs.
 4. **Variants14** (`src/variants14`) - 14-class setup where digits 0/1/4/7 are split into variant labels.
 
-Your original NumPy MLP training file is preserved at:
+## Results & Analysis
 
-- `legacy/main_numpy_mlp.py`
+- [Reports Index (HTML)](experiments/reports/index.html)
+- [Skeleton CNN vs Local CNN - Analysis (HTML)](experiments/reports/skeleton_vs_local_analysis.html)
+- [Project Changes & Reproduction Tutorial (HTML)](experiments/reports/project_changes_and_repro_tutorial.html)
 
 ## Install
 
@@ -60,9 +62,3 @@ python -m src.variants14.train_variants14_cnn --data-dir data/processed/mnist14_
 - `5`, `6`
 - `7_crossed`, `7_uncrossed`
 - `8`, `9`
-
-## Legacy Note
-
-The original pure NumPy MLP implementation is preserved in:
-
-- `legacy/main_numpy_mlp.py`
