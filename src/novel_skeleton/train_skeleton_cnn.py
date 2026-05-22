@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
+from skimage.transform import probabilistic_hough_line
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if ROOT not in sys.path:
@@ -21,8 +22,70 @@ def skeletonize_batch(images):
     return np.stack([zhang_suen_skeletonize_uint8(img) for img in images], axis=0)
 
 
-def to_loader(images, labels, batch_size=128, shuffle=False):
-    x = torch.tensor(images, dtype=torch.float32).unsqueeze(1) / 255.0
+def hough_line_map_uint8(
+    skeleton_img_2d: np.ndarray,
+    threshold: int = 8,
+    line_length: int = 5,
+    line_gap: int = 2,
+) -> np.ndarray:
+    """Generate a uint8 line map from a skeletonized MNIST image using probabilistic Hough."""
+    binary = skeleton_img_2d > 0
+    lines = probabilistic_hough_line(
+        binary,
+        threshold=threshold,
+        line_length=line_length,
+        line_gap=line_gap,
+    )
+
+    line_map = np.zeros_like(skeleton_img_2d, dtype=np.uint8)
+    for (x0, y0), (x1, y1) in lines:
+        num = max(abs(x1 - x0), abs(y1 - y0)) + 1
+        xs = np.linspace(x0, x1, num=num, dtype=int)
+        ys = np.linspace(y0, y1, num=num, dtype=int)
+        line_map[ys, xs] = 255
+    return line_map
+
+
+def build_input_tensor(images, channel_mode, hough_threshold, hough_line_length, hough_line_gap):
+    if channel_mode == "skeleton":
+        x_np = images[:, None, :, :].astype(np.float32) / 255.0
+    elif channel_mode == "skeleton_hough":
+        hough_maps = np.stack(
+            [
+                hough_line_map_uint8(
+                    img,
+                    threshold=hough_threshold,
+                    line_length=hough_line_length,
+                    line_gap=hough_line_gap,
+                )
+                for img in images
+            ],
+            axis=0,
+        )
+        x_np = np.stack([images, hough_maps], axis=1).astype(np.float32) / 255.0
+    else:
+        raise ValueError(f"Unsupported channel_mode: {channel_mode}")
+
+    return torch.tensor(x_np, dtype=torch.float32)
+
+
+def to_loader(
+    images,
+    labels,
+    batch_size=128,
+    shuffle=False,
+    channel_mode="skeleton",
+    hough_threshold=8,
+    hough_line_length=5,
+    hough_line_gap=2,
+):
+    x = build_input_tensor(
+        images,
+        channel_mode=channel_mode,
+        hough_threshold=hough_threshold,
+        hough_line_length=hough_line_length,
+        hough_line_gap=hough_line_gap,
+    )
     y = torch.tensor(labels, dtype=torch.long)
     return DataLoader(TensorDataset(x, y), batch_size=batch_size, shuffle=shuffle)
 
@@ -49,10 +112,29 @@ def main(args):
     train_images = skeletonize_batch(train_images)
     test_images = skeletonize_batch(test_images)
 
-    train_loader = to_loader(train_images, train_labels, args.batch_size, shuffle=True)
-    test_loader = to_loader(test_images, test_labels, args.batch_size, shuffle=False)
+    train_loader = to_loader(
+        train_images,
+        train_labels,
+        args.batch_size,
+        shuffle=True,
+        channel_mode=args.channel_mode,
+        hough_threshold=args.hough_threshold,
+        hough_line_length=args.hough_line_length,
+        hough_line_gap=args.hough_line_gap,
+    )
+    test_loader = to_loader(
+        test_images,
+        test_labels,
+        args.batch_size,
+        shuffle=False,
+        channel_mode=args.channel_mode,
+        hough_threshold=args.hough_threshold,
+        hough_line_length=args.hough_line_length,
+        hough_line_gap=args.hough_line_gap,
+    )
 
-    model = SimpleCNN(num_classes=10).to(device)
+    in_channels = 1 if args.channel_mode == "skeleton" else 2
+    model = SimpleCNN(num_classes=10, in_channels=in_channels).to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=args.lr)
     criterion = nn.CrossEntropyLoss()
 
@@ -86,4 +168,13 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument(
+        "--channel-mode",
+        choices=["skeleton", "skeleton_hough"],
+        default="skeleton",
+        help="Input channels for model: skeleton only, or skeleton + Hough line map.",
+    )
+    parser.add_argument("--hough-threshold", type=int, default=8)
+    parser.add_argument("--hough-line-length", type=int, default=5)
+    parser.add_argument("--hough-line-gap", type=int, default=2)
     main(parser.parse_args())

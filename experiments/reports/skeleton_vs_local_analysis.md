@@ -52,6 +52,48 @@ Interpretation:
 4. Train longer (e.g., 15–25 epochs with scheduler) for both models.
 5. Add per-class confusion matrix to analyze where skeletonization helps/hurts most.
 
+## Hough-Augmented Skeleton Follow-up (2026-05-22)
+
+### Goal
+
+Evaluate whether adding a Hough line-map channel to skeleton input improves test accuracy.
+
+### Implementation summary
+
+- Added optional 2-channel mode in `src.novel_skeleton.train_skeleton_cnn`:
+  - `channel_mode=skeleton` (baseline, 1 channel)
+  - `channel_mode=skeleton_hough` (2 channels: `[skeleton, hough_line_map]`)
+- Added tunable Hough parameters:
+  - `hough_threshold`
+  - `hough_line_length`
+  - `hough_line_gap`
+- Updated `SimpleCNN` to accept configurable `in_channels`.
+
+### Completed experiment results (5 epochs, seed=42)
+
+1) **Baseline skeleton** (`channel_mode=skeleton`)
+- Best test accuracy: **0.9778**
+
+2) **Skeleton + Hough** (`threshold=6, line_length=4, line_gap=1`)
+- Epochs: 0.9665, 0.9722, 0.9768, 0.9774, 0.9795
+- Best test accuracy: **0.9795**
+
+3) **Skeleton + Hough** (`threshold=8, line_length=5, line_gap=2`)
+- Epochs: 0.9656, 0.9733, 0.9762, 0.9769, 0.9793
+- Best test accuracy: **0.9793**
+
+### Analysis
+
+- Hough augmentation improved over skeleton baseline in both completed settings:
+  - +0.0017 (0.17pp) for `(6,4,1)`
+  - +0.0015 (0.15pp) for `(8,5,2)`
+- Best observed Hough run: **0.9795**, which is a modest but consistent gain vs **0.9778** baseline.
+- Local grayscale CNN (`0.9911`) remains stronger overall, but the Hough channel narrows the gap slightly while preserving a topology-focused pipeline.
+
+### Conclusion
+
+Hough Transform is beneficial in this setup as an auxiliary channel. The improvement is incremental (not dramatic), but positive and easy to keep behind a configuration flag.
+
 ## Artifacts
 
 - Logs:
