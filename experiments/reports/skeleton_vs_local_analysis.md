@@ -94,6 +94,31 @@ Evaluate whether adding a Hough line-map channel to skeleton input improves test
 
 Hough Transform is beneficial in this setup as an auxiliary channel. The improvement is incremental (not dramatic), but positive and easy to keep behind a configuration flag.
 
+## Multi-seed Stability Check (seeds: 42, 123, 999)
+
+To validate robustness (not just a single-seed bump), I ran 5-epoch comparisons across 3 seeds.
+
+### Best test accuracy by seed
+
+| Mode / Params | Seed 42 | Seed 123 | Seed 999 | Mean |
+|---|---:|---:|---:|---:|
+| Skeleton baseline (`skeleton`) | 0.9778 | 0.9809 | 0.9788 | **0.9792** |
+| Skeleton + Hough (`6,4,1`) | 0.9785 | 0.9780 | 0.9772 | **0.9779** |
+| Skeleton + Hough (`8,5,2`) | 0.9793 | 0.9790 | 0.9784 | **0.9789** |
+
+### Stability analysis
+
+- While Hough produced slight gains on some individual runs, the 3-seed average did **not** beat the baseline:
+  - `Hough (6,4,1)` vs baseline mean: **-0.0013** (-0.13pp)
+  - `Hough (8,5,2)` vs baseline mean: **-0.0003** (-0.03pp)
+- The `(8,5,2)` setting is notably better than `(6,4,1)` and nearly ties baseline, but still falls short on average.
+
+### Final recommendation
+
+- Keep the Hough path as an **optional experimental mode** (it is implemented and useful for further research),
+- but keep **`channel_mode: skeleton` as the default** until a stronger multi-seed advantage is demonstrated.
+- Next likely improvement: combine richer preprocessing (cleanup + adaptive thresholding) or use feature-fusion rather than raw line-map channel only.
+
 ## Artifacts
 
 - Logs:
