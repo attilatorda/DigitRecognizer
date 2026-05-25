@@ -17,7 +17,11 @@ New extension in this run:
 - `data/processed/17digits_fixed_equal_height_thickness.png`
 - split into 17 equal slots and centered into 28x28 templates
 - classes:
-  `open_four, crossed_zero, european_one, two, four, european_seven, nine_variant_a, zero, american_one, curly_two, three, irregular_four, five, six, american_seven, eight, nine_variant_b`
+  `4_variant_a, 0_variant_a, 1_variant_a, 2_variant_a, 4_variant_b, 7_variant_a, 9_variant_a, 0_variant_b, 1_variant_b, 2_variant_b, 3, 4_variant_c, 5, 6, 7_variant_b, 8, 9_variant_b`
+
+Variant naming rationale:
+- `digit_variant_x` is used when culturally common handwriting forms differ (for example: crossed vs uncrossed 0, serifed/angled 1 forms, and crossed vs uncrossed 7 often associated with different regional writing habits).
+- Plain digit names (`3`, `5`, `6`, `8`) are used where this dataset did not separate meaningful style variants.
 
 ### Pipeline files
 - `src/variants17/generate_variants17.py`
