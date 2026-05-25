@@ -19,3 +19,6 @@ experiments/logs/
 # Keep reports/configs tracked
 !experiments/reports/
 !experiments/configs/
+
+# Private planning page
+milestones.html

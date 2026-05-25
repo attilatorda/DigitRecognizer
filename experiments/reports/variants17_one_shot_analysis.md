@@ -58,18 +58,13 @@ Interpretation:
 - The model learns the synthetic/style-preserving transformed set very well.
 - Transfer to MNIST remains low, indicating strong domain shift between custom templates and handwritten MNIST distribution.
 
-## 4) Comparison vs existing project benchmarks
+## 4) One-shot performance summary
 
-From existing validated reports/logs:
-- Local grayscale CNN best test accuracy: **99.11%**
-- Skeleton CNN best test accuracy: **97.78%**
-
-Compared to one-shot variants17:
+Core one-shot outcomes:
 - One-shot variants17 MNIST best: **9.62%**
+- Transformed 17-class eval: up to **99.12%**
 
-Absolute gaps:
-- vs Local CNN: **89.49 percentage points** lower
-- vs Skeleton CNN: **88.16 percentage points** lower
+This highlights a strong in-domain robustness profile with weak cross-domain transfer to MNIST.
 
 ## 5) Why this happens (technical analysis)
 

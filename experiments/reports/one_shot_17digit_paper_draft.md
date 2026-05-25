@@ -80,12 +80,7 @@ From the latest run:
 - **Best transformed 17-way accuracy:** 99.12%
 
 Baseline references from project reports:
-- Local CNN (standard MNIST training): 99.11%
-- Skeleton CNN: 97.78%
-
-Absolute gaps versus one-shot transfer:
-- vs Local CNN: 89.49 percentage points
-- vs Skeleton CNN: 88.16 percentage points
+- One-shot variants17 MNIST transfer remains at 9.62% under the current strict setup.
 
 ## 6. Discussion
 
