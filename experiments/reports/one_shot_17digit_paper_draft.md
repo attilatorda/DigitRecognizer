@@ -82,6 +82,29 @@ From the latest run:
 Baseline references from project reports:
 - One-shot variants17 MNIST transfer remains at 9.62% under the current strict setup.
 
+### 5.1 Multi-seed stability (n=5)
+
+Best-per-seed MNIST transfer (%): `9.62, 10.39, 12.98, 7.59, 9.22`  
+Best-per-seed transformed17 (%): `99.12, 99.12, 97.06, 99.41, 97.65`
+
+| Metric | Mean (%) | Std (%) |
+|---|---:|---:|
+| MNIST best accuracy (5 seeds) | 9.96 | 1.97 |
+| Transformed17 best accuracy (5 seeds) | 98.47 | 1.05 |
+
+### 5.2 Nearest-template one-shot baseline
+
+| Method | MNIST (%) | Transformed17 (%) |
+|---|---:|---:|
+| Nearest-template (L2) | 11.94 | 97.06 |
+| CNN one-shot (5-seed mean best) | 9.96 | 98.47 |
+| Prototype-embedding baseline (single run, seed=42) | 11.37 | 97.35 |
+
+Interpretation:
+- On MNIST transfer, direct nearest-template matching is competitive and even higher than the current CNN mean.
+- On transformed in-domain evaluation, CNN achieves stronger robustness than nearest-template matching.
+- The prototype-embedding baseline acts as an intermediate learned-metric method and should be extended to multi-seed reporting in the next revision.
+
 ## 6. Discussion
 
 The observed pattern is consistent with expected one-shot behavior under domain mismatch:
