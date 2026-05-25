@@ -1,0 +1,89 @@
+# Variants17 One-Shot Learning — Result Analysis
+
+Date: 2026-05-25  
+Author: Cline
+
+## 1) Objective
+
+Evaluate a strict one-shot setup where the model is trained from a custom **17-template** digit strip (one template per class) and then tested on MNIST.
+
+New extension in this run:
+- controlled transformed evaluation set (20 samples per class)
+- transformation logging for reproducibility
+
+## 2) Setup summary
+
+### Training source (one-shot base)
+- `data/processed/17digits_fixed_equal_height_thickness.png`
+- split into 17 equal slots and centered into 28x28 templates
+- classes:
+  `open_four, crossed_zero, european_one, two, four, european_seven, nine_variant_a, zero, american_one, curly_two, three, irregular_four, five, six, american_seven, eight, nine_variant_b`
+
+### Pipeline files
+- `src/variants17/generate_variants17.py`
+- `src/variants17/train_variants17_cnn.py`
+- `src/variants17/label_schema.py`
+
+### Controlled transformed eval set
+- exactly **20** transformed samples per class
+- total transformed samples: **340**
+- per-sample operations (mild):
+  - rotation: ±8°
+  - stretch: x/y scale in [0.92, 1.08]
+  - thickness: none / dilate / erode
+  - noise: Gaussian std in [0.01, 0.03]
+
+Artifacts:
+- `experiments/checkpoints/variants17/eval_transformed/images.npy`
+- `experiments/checkpoints/variants17/eval_transformed/labels17.npy`
+- `experiments/checkpoints/variants17/eval_transformed/transformations.json`
+
+## 3) Results from latest run
+
+Command:
+
+```bash
+python src/variants17/train_variants17_cnn.py
+```
+
+Observed:
+- **Best MNIST test accuracy**: **9.62%**
+- **Transformed 17-class eval accuracy**: up to **99.12%**
+
+Interpretation:
+- The model learns the synthetic/style-preserving transformed set very well.
+- Transfer to MNIST remains low, indicating strong domain shift between custom templates and handwritten MNIST distribution.
+
+## 4) Comparison vs existing project benchmarks
+
+From existing validated reports/logs:
+- Local grayscale CNN best test accuracy: **99.11%**
+- Skeleton CNN best test accuracy: **97.78%**
+
+Compared to one-shot variants17:
+- One-shot variants17 MNIST best: **9.62%**
+
+Absolute gaps:
+- vs Local CNN: **89.49 percentage points** lower
+- vs Skeleton CNN: **88.16 percentage points** lower
+
+## 5) Why this happens (technical analysis)
+
+1. **Extremely low base diversity**: one prototype per class cannot span handwritten variability.
+2. **Style-class mismatch**: multiple class variants map to the same canonical MNIST digit (e.g., two “1” styles), while MNIST labels only digit identity.
+3. **Domain gap**: stroke shape, thickness, and writing dynamics in MNIST are broader than controlled synthetic perturbations.
+4. **Evaluation projection loss**: 17-way predictions are projected to 10-way digits, which can mask style confusion but does not solve representation mismatch.
+
+## 6) Practical conclusion
+
+This is a successful **proof-of-concept one-shot style recognizer**, but not yet a competitive MNIST recognizer.
+
+- Strong in-domain robustness (99%+ on transformed variants)
+- Weak cross-domain generalization to MNIST (~10%)
+
+## 7) Recommended next steps
+
+1. Add stronger but still realistic augmentations (elastic distortions, local affine jitter).
+2. Replace plain supervised one-shot with **metric learning** (prototypical/triplet loss).
+3. Use a frozen pretrained feature extractor and nearest-prototype classification.
+4. Add a hybrid training strategy: small curated real handwritten support set per class.

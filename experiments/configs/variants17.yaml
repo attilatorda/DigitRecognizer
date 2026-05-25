@@ -1,0 +1,10 @@
+mnist_path: mnist_data
+source_image_path: data/processed/17digits_fixed_equal_height_thickness.png
+processed_dir: data/processed/mnist17_variants
+out_dir: experiments/checkpoints/variants17
+epochs: 8
+batch_size: 128
+lr: 0.001
+repeats: 256
+noise_std: 0.04
+seed: 42
