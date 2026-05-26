@@ -34,6 +34,7 @@ Given one template \(x_c\) per class \(c \in \mathcal{C}_{17}\), the training ob
 
 ### 3.1 Template extraction
 - Source: `data/processed/17digits_fixed_equal_height_thickness.png`
+- Provenance note: the 17-class source composite image was generated using ChatGPT (presumably via a Stable Diffusion-based image generation backend).
 - Procedure:
   - isolate central strip,
   - split into 17 equal horizontal slots,

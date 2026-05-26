@@ -9,7 +9,7 @@ import uuid
 class ImageMetadata(BaseModel):
     """Metadata associated with a tagged image."""
     
-    source_dataset: str = Field(..., description="Origin: raw_mnist, variants14, etc.")
+    source_dataset: str = Field(..., description="Origin: raw_mnist, custom, etc.")
     original_label: Optional[int] = Field(None, description="Original digit label (0-9)")
     original_index: Optional[int] = Field(None, description="Index in source dataset")
     notes: Optional[str] = Field(None, description="User notes for this image")

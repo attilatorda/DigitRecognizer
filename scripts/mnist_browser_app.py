@@ -85,16 +85,13 @@ with st.sidebar:
     
     dataset_type = st.radio(
         "Choose dataset source:",
-        options=["Raw MNIST", "Processed Variants14", "Load from File"],
+        options=["Raw MNIST", "Load from File"],
         help="Select which MNIST dataset to browse"
     )
     
     if dataset_type == "Raw MNIST":
         dataset_path = str(project_root / "mnist_data")
         dataset_name = "raw_mnist"
-    elif dataset_type == "Processed Variants14":
-        dataset_path = str(project_root / "data" / "processed" / "mnist14_variants")
-        dataset_name = "variants14"
     else:  # Load from File
         dataset_path = st.text_input(
             "Enter path to MNIST dataset folder:",

@@ -6,7 +6,6 @@ A comprehensive Streamlit web application for browsing MNIST datasets, adding cu
 
 ✅ **Browse MNIST Datasets**
 - Load raw MNIST (60,000 training images)
-- Load processed variants (14-class variant dataset)
 - Load custom MNIST datasets
 - Navigate with next/prev/jump/random controls
 
@@ -75,7 +74,7 @@ The app will open in your browser at `http://localhost:8501`
 ### Typical Workflow
 
 1. **Load a Dataset**
-   - In the sidebar, select "Raw MNIST" or "Processed Variants14"
+   - In the sidebar, select "Raw MNIST" or load from a custom folder
    - Click "📂 Load Dataset"
    - Wait for the dataset to load (~2-3 seconds)
 
@@ -145,7 +144,7 @@ The app will open in your browser at `http://localhost:8501`
 - `md5_hash`: MD5 hash of pixel data (for deduplication)
 - `pixel_data`: Base64-encoded PNG image bytes
 - `tags`: Array of custom labels/tags
-- `metadata.source_dataset`: Origin ("raw_mnist", "variants14", etc.)
+- `metadata.source_dataset`: Origin ("raw_mnist", "custom", etc.)
 - `metadata.original_label`: Original MNIST digit (0-9)
 - `metadata.original_index`: Index in source dataset
 - `metadata.notes`: Optional user annotations

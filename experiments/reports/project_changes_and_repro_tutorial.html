@@ -54,16 +54,9 @@
         <li><code>train_skeleton_cnn.py</code> (CNN training on skeletonized images)</li>
       </ul>
     </li>
-    <li><code>src/variants14/</code>
-      <ul>
-        <li><code>label_schema.py</code> (14-class schema)</li>
-        <li><code>generate_variants14.py</code> (build 14-class labels from MNIST)</li>
-        <li><code>train_variants14_cnn.py</code> (train CNN with 14 classes)</li>
-      </ul>
-    </li>
     <li><code>experiments/configs/</code>
       <ul>
-        <li><code>baseline.yaml</code>, <code>local_cnn.yaml</code>, <code>skeleton_cnn.yaml</code>, <code>variants14.yaml</code></li>
+        <li><code>baseline.yaml</code>, <code>local_cnn.yaml</code>, <code>skeleton_cnn.yaml</code>, <code>variants17.yaml</code></li>
       </ul>
     </li>
     <li><code>experiments/logs/</code>
@@ -136,12 +129,12 @@ python -m src.local_cnn.train_local_cnn --mnist-path mnist_data --out-dir experi
 
   <hr />
 
-  <h2>3) Reproducing the 14-class variant workflow</h2>
-  <h3>Generate 14-class data from MNIST</h3>
-  <pre><code>python -m src.variants14.generate_variants14 --mnist-path mnist_data --out-dir data/processed/mnist14_variants</code></pre>
+  <h2>3) Reproducing the 17-class one-shot workflow</h2>
+  <h3>Generate 17-class template dataset</h3>
+  <pre><code>python -m src.variants17.generate_variants17 --image-path data/processed/17digits_fixed_equal_height_thickness.png --out-dir data/processed/mnist17_variants</code></pre>
 
-  <h3>Train 14-class model</h3>
-  <pre><code>python -m src.variants14.train_variants14_cnn --data-dir data/processed/mnist14_variants --out-dir experiments/checkpoints/variants14 --epochs 5 --batch-size 128 --lr 0.001</code></pre>
+  <h3>Train 17-class one-shot CNN</h3>
+  <pre><code>python -m src.variants17.train_variants17_cnn --data-dir data/processed/mnist17_variants --out-dir experiments/checkpoints/variants17 --epochs 8 --batch-size 128 --lr 0.001</code></pre>
 
   <hr />
 

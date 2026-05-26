@@ -29,13 +29,8 @@ This project was restructured from a single training script into a multi-track r
   - `skeletonize.py` (Zhang–Suen style thinning via `skimage.morphology.skeletonize`)
   - `train_skeleton_cnn.py` (CNN training on skeletonized images)
 
-- `src/variants14/`
-  - `label_schema.py` (14-class schema)
-  - `generate_variants14.py` (build 14-class labels from MNIST)
-  - `train_variants14_cnn.py` (train CNN with 14 classes)
-
 - `experiments/configs/`
-  - `baseline.yaml`, `local_cnn.yaml`, `skeleton_cnn.yaml`, `variants14.yaml`
+  - `baseline.yaml`, `local_cnn.yaml`, `skeleton_cnn.yaml`, `variants17.yaml`
 
 - `experiments/logs/`
   - Run logs from executed experiments.
@@ -123,18 +118,18 @@ Observed in this run:
 
 ---
 
-## 3) Reproducing the 14-class variant workflow
+## 3) Reproducing the 17-class one-shot workflow
 
-### Generate 14-class data from MNIST
+### Generate 17-class template dataset
 
 ```bash
-python -m src.variants14.generate_variants14 --mnist-path mnist_data --out-dir data/processed/mnist14_variants
+python -m src.variants17.generate_variants17 --image-path data/processed/17digits_fixed_equal_height_thickness.png --out-dir data/processed/mnist17_variants
 ```
 
-### Train 14-class model
+### Train 17-class one-shot CNN
 
 ```bash
-python -m src.variants14.train_variants14_cnn --data-dir data/processed/mnist14_variants --out-dir experiments/checkpoints/variants14 --epochs 5 --batch-size 128 --lr 0.001
+python -m src.variants17.train_variants17_cnn --data-dir data/processed/mnist17_variants --out-dir experiments/checkpoints/variants17 --epochs 8 --batch-size 128 --lr 0.001
 ```
 
 ---

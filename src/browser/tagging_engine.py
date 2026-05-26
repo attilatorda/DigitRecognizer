@@ -22,7 +22,7 @@ class TaggingSession:
         Args:
             images: Array of images (N x H x W) - numpy uint8 array
             labels: Optional array of original labels (N,)
-            source_dataset: Name of source dataset (raw_mnist, variants14, etc.)
+            source_dataset: Name of source dataset (raw_mnist, custom, etc.)
         """
         self.images = images
         self.labels = labels
