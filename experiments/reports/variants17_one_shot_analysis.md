@@ -76,18 +76,21 @@ Best-per-seed transformed17 accuracies (%): `99.12, 99.12, 97.06, 99.41, 97.65`
 | MNIST best accuracy (5 seeds) | 9.96 | 1.97 |
 | Transformed17 best accuracy (5 seeds) | 98.47 | 1.05 |
 
-### Nearest-template baseline (L2, one-shot, no training)
+### One-shot baselines (nearest-template and learned metric)
 
 | Method | MNIST (%) | Transformed17 (%) |
 |---|---:|---:|
 | Nearest-template (L2 to 17 templates) | 11.94 | 97.06 |
-| CNN one-shot (5-seed mean best) | 9.96 | 98.47 |
-| Prototype-embedding baseline (single run, seed=42) | 11.37 | 97.35 |
+| Prototype-embedding baseline (5-seed mean ± std) | 9.35 ± 2.06 | 97.00 ± 0.49 |
+| CNN one-shot (5-seed mean ± std of best) | 9.96 ± 1.97 | 98.47 ± 1.05 |
+
+Prototype-embedding per-seed finals (MNIST %): `11.37, 8.53, 10.05, 10.62, 6.18`  
+Prototype-embedding per-seed finals (transformed17 %): `97.35, 97.65, 96.76, 96.47, 96.76`
 
 Baseline takeaway:
 - Template matching is competitive on MNIST transfer in this strict setup.
 - CNN improves in-domain transformed robustness over nearest-template matching.
-- Prototype-embedding baseline provides a stronger learned-metric comparator, with MNIST transfer near nearest-template and transformed robustness between nearest-template and CNN.
+- Prototype-embedding baseline provides a stronger learned-metric comparator and should be retained as a core comparison track.
 
 ## 5) Why this happens (technical analysis)
 

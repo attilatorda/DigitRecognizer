@@ -92,18 +92,21 @@ Best-per-seed transformed17 (%): `99.12, 99.12, 97.06, 99.41, 97.65`
 | MNIST best accuracy (5 seeds) | 9.96 | 1.97 |
 | Transformed17 best accuracy (5 seeds) | 98.47 | 1.05 |
 
-### 5.2 Nearest-template one-shot baseline
+### 5.2 One-shot baselines: nearest-template vs learned metric
 
 | Method | MNIST (%) | Transformed17 (%) |
 |---|---:|---:|
 | Nearest-template (L2) | 11.94 | 97.06 |
-| CNN one-shot (5-seed mean best) | 9.96 | 98.47 |
-| Prototype-embedding baseline (single run, seed=42) | 11.37 | 97.35 |
+| Prototype-embedding baseline (5-seed mean ± std) | 9.35 ± 2.06 | 97.00 ± 0.49 |
+| CNN one-shot (5-seed mean ± std of best) | 9.96 ± 1.97 | 98.47 ± 1.05 |
+
+Prototype-embedding per-seed final MNIST (%): `11.37, 8.53, 10.05, 10.62, 6.18`  
+Prototype-embedding per-seed final transformed17 (%): `97.35, 97.65, 96.76, 96.47, 96.76`
 
 Interpretation:
 - On MNIST transfer, direct nearest-template matching is competitive and even higher than the current CNN mean.
 - On transformed in-domain evaluation, CNN achieves stronger robustness than nearest-template matching.
-- The prototype-embedding baseline acts as an intermediate learned-metric method and should be extended to multi-seed reporting in the next revision.
+- The prototype-embedding baseline now includes multi-seed reporting and acts as a stronger learned-metric comparison point.
 
 ## 6. Discussion
 
