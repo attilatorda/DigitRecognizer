@@ -5,6 +5,7 @@ batch_size: 128
 lr: 0.001
 seed: 42
 channel_mode: skeleton
+skeleton_method: zhang
 hough_threshold: 8
 hough_line_length: 5
 hough_line_gap: 2

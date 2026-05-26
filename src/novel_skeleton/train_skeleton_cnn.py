@@ -15,11 +15,11 @@ if ROOT not in sys.path:
 from src.common.data_io import load_mnist_idx
 from src.common.utils import set_seed, ensure_dir
 from src.local_cnn.model import SimpleCNN
-from src.novel_skeleton.skeletonize import zhang_suen_skeletonize_uint8
+from src.novel_skeleton.skeletonize import skeletonize_uint8
 
 
-def skeletonize_batch(images):
-    return np.stack([zhang_suen_skeletonize_uint8(img) for img in images], axis=0)
+def skeletonize_batch(images, method: str = "zhang"):
+    return np.stack([skeletonize_uint8(img, method=method) for img in images], axis=0)
 
 
 def hough_line_map_uint8(
@@ -109,8 +109,8 @@ def main(args):
     train_images, train_labels = load_mnist_idx(args.mnist_path, "train")
     test_images, test_labels = load_mnist_idx(args.mnist_path, "t10k")
 
-    train_images = skeletonize_batch(train_images)
-    test_images = skeletonize_batch(test_images)
+    train_images = skeletonize_batch(train_images, method=args.skeleton_method)
+    test_images = skeletonize_batch(test_images, method=args.skeleton_method)
 
     train_loader = to_loader(
         train_images,
@@ -177,4 +177,10 @@ if __name__ == "__main__":
     parser.add_argument("--hough-threshold", type=int, default=8)
     parser.add_argument("--hough-line-length", type=int, default=5)
     parser.add_argument("--hough-line-gap", type=int, default=2)
+    parser.add_argument(
+        "--skeleton-method",
+        choices=["zhang", "lee", "thin", "medial_axis"],
+        default="zhang",
+        help="Skeletonization algorithm to apply before training.",
+    )
     main(parser.parse_args())
