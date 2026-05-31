@@ -5,7 +5,7 @@ import sys
 
 import numpy as np
 import torch
-from skimage.morphology import binary_dilation, binary_erosion
+from skimage.morphology import dilation, erosion
 from skimage.transform import AffineTransform, rotate, warp
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
@@ -47,12 +47,12 @@ def _apply_controlled_transform(img01: np.ndarray, params: dict, rng: np.random.
     tf = AffineTransform(scale=(float(params["stretch_x"]), float(params["stretch_y"])))
     out = warp(out, tf.inverse, preserve_range=True, mode="edge", output_shape=out.shape)
 
-    fg = out < 0.7
+    fg = out > 0.3  # bright pixels are strokes (MNIST convention: white-on-black)
     if params["thickness_op"] == "dilate":
-        fg = binary_dilation(fg)
+        fg = dilation(fg)
     elif params["thickness_op"] == "erode":
-        fg = binary_erosion(fg)
-    out = np.where(fg, np.minimum(out, 0.15), out)
+        fg = erosion(fg)
+    out = np.where(fg, np.maximum(out, 0.85), out)
 
     noise = rng.normal(0.0, float(params["noise_std"]), size=out.shape).astype(np.float32)
     out = np.clip(out + noise, 0.0, 1.0)

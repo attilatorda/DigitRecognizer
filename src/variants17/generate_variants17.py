@@ -48,12 +48,12 @@ def _center_to_canvas(crop_gray: np.ndarray, out_size: int = 28) -> np.ndarray:
     scale = min(20.0 / max_side, 1.0)  # keep inside 20x20 center box
     nh, nw = max(1, int(round(h * scale))), max(1, int(round(w * scale)))
 
-    resized = np.array(Image.fromarray(tight).resize((nw, nh), Image.Resampling.NEAREST), dtype=np.uint8)
-    canvas = np.full((out_size, out_size), 255, dtype=np.uint8)
+    resized = np.array(Image.fromarray(tight).resize((nw, nh), Image.Resampling.BILINEAR), dtype=np.uint8)
+    canvas = np.full((out_size, out_size), 0, dtype=np.uint8)  # black background = MNIST convention
 
     oy = (out_size - nh) // 2
     ox = (out_size - nw) // 2
-    canvas[oy : oy + nh, ox : ox + nw] = resized
+    canvas[oy : oy + nh, ox : ox + nw] = 255 - resized  # invert: dark ink → bright stroke
     return canvas
 
 

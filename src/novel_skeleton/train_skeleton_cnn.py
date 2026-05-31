@@ -18,8 +18,17 @@ from src.local_cnn.model import SimpleCNN
 from src.novel_skeleton.skeletonize import skeletonize_uint8
 
 
-def skeletonize_batch(images, method: str = "zhang"):
-    return np.stack([skeletonize_uint8(img, method=method) for img in images], axis=0)
+def skeletonize_batch(images, method: str = "zhang", progress_every: int = 500, split_name: str = "set"):
+    out = []
+    total = len(images)
+    for idx, img in enumerate(images, start=1):
+        out.append(skeletonize_uint8(img, method=method))
+        if progress_every > 0 and (idx % progress_every == 0 or idx == total):
+            print(
+                f"[skeleton_cnn] skeletonize_progress split={split_name} method={method} {idx}/{total}",
+                flush=True,
+            )
+    return np.stack(out, axis=0)
 
 
 def hough_line_map_uint8(
@@ -109,8 +118,24 @@ def main(args):
     train_images, train_labels = load_mnist_idx(args.mnist_path, "train")
     test_images, test_labels = load_mnist_idx(args.mnist_path, "t10k")
 
-    train_images = skeletonize_batch(train_images, method=args.skeleton_method)
-    test_images = skeletonize_batch(test_images, method=args.skeleton_method)
+    print(
+        f"[skeleton_cnn] skeletonize_start method={args.skeleton_method} "
+        f"train={len(train_images)} test={len(test_images)}",
+        flush=True,
+    )
+    train_images = skeletonize_batch(
+        train_images,
+        method=args.skeleton_method,
+        progress_every=args.skeletonize_progress_every,
+        split_name="train",
+    )
+    test_images = skeletonize_batch(
+        test_images,
+        method=args.skeleton_method,
+        progress_every=args.skeletonize_progress_every,
+        split_name="test",
+    )
+    print("[skeleton_cnn] skeletonize_done", flush=True)
 
     train_loader = to_loader(
         train_images,
@@ -182,5 +207,11 @@ if __name__ == "__main__":
         choices=["zhang", "lee", "thin", "medial_axis"],
         default="zhang",
         help="Skeletonization algorithm to apply before training.",
+    )
+    parser.add_argument(
+        "--skeletonize-progress-every",
+        type=int,
+        default=500,
+        help="Print preprocessing progress every N images (set 0 to disable).",
     )
     main(parser.parse_args())
