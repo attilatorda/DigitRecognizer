@@ -71,6 +71,10 @@ def initialize_session_state():
         st.session_state.existing_dataset = None
     if "temp_tags" not in st.session_state:
         st.session_state.temp_tags = {}
+    if "gallery_page" not in st.session_state:
+        st.session_state.gallery_page = 0
+    if "gallery_page_size" not in st.session_state:
+        st.session_state.gallery_page_size = 20
 
 
 initialize_session_state()
@@ -231,7 +235,7 @@ if st.session_state.images is None:
     st.info("👈 Select and load a dataset from the sidebar to begin")
 else:
     # Create tabs for different views
-    tab1, tab2, tab3 = st.tabs(["🖼️ Image Viewer", "🏷️ Batch Tagging", "📊 Dataset Summary"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🖼️ Image Viewer", "🏷️ Batch Tagging", "📊 Dataset Summary", "🗂️ Gallery"])
     
     # ========================================================================
     # TAB 1: IMAGE VIEWER
@@ -281,7 +285,7 @@ else:
             # Display with resizing option
             display_size = st.slider("Display size:", 100, 400, 200, step=50)
             resized_image = resize_image(current_image, (display_size, display_size))
-            st.image(resized_image, caption=f"Image #{current_idx}", use_container_width=False, width=display_size)
+            st.image(resized_image, caption=f"Image #{current_idx}", width=display_size)
         
         with col2:
             st.subheader("📋 Image Details")
@@ -492,6 +496,78 @@ else:
             st.subheader("⚠️ Duplicate Warnings")
             for warning in st.session_state.session.duplicate_warnings:
                 st.warning(f"Image #{warning['duplicate_index']}: {warning['message']}")
+
+    # ========================================================================
+    # TAB 4: GALLERY
+    # ========================================================================
+    with tab4:
+        st.subheader("Image Gallery")
+
+        N = len(st.session_state.images)
+
+        # Page size control
+        gcol1, gcol2, gcol3, gcol4 = st.columns([2, 1, 1, 2])
+        with gcol1:
+            new_page_size = st.selectbox(
+                "Images per page:",
+                options=[10, 20, 50],
+                index=[10, 20, 50].index(st.session_state.gallery_page_size),
+                key="gallery_page_size_select"
+            )
+            if new_page_size != st.session_state.gallery_page_size:
+                st.session_state.gallery_page_size = new_page_size
+                st.session_state.gallery_page = 0
+                st.rerun()
+
+        page_size = st.session_state.gallery_page_size
+        total_pages = max(1, (N + page_size - 1) // page_size)
+        page = min(st.session_state.gallery_page, total_pages - 1)
+
+        with gcol2:
+            if st.button("← Prev", disabled=(page == 0), key="gallery_prev"):
+                st.session_state.gallery_page = page - 1
+                st.rerun()
+        with gcol3:
+            if st.button("Next →", disabled=(page >= total_pages - 1), key="gallery_next"):
+                st.session_state.gallery_page = page + 1
+                st.rerun()
+        with gcol4:
+            start = page * page_size
+            end = min(start + page_size, N)
+            st.markdown(
+                f"**Page {page + 1} / {total_pages}** &nbsp; "
+                f"<small>images {start + 1}–{end} of {N}</small>",
+                unsafe_allow_html=True
+            )
+
+        st.divider()
+
+        # Build set of tagged source indices for O(1) lookup per render
+        tagged_indices: set = set()
+        if st.session_state.session is not None:
+            for img in st.session_state.session.tagged_dataset.images:
+                if img.metadata.original_index is not None:
+                    tagged_indices.add(img.metadata.original_index)
+
+        COLS = 5
+        cols = st.columns(COLS)
+        for i, idx in enumerate(range(start, end)):
+            with cols[i % COLS]:
+                thumb = resize_image(st.session_state.images[idx], (112, 112))
+                st.image(thumb, width=112)
+                label_str = (
+                    str(int(st.session_state.labels[idx]))
+                    if st.session_state.labels is not None
+                    else "?"
+                )
+                tag_marker = " ✓" if idx in tagged_indices else ""
+                if st.button(
+                    f"#{idx} [{label_str}]{tag_marker}",
+                    key=f"gal_{idx}",
+                    use_container_width=True,
+                ):
+                    st.session_state.current_image_idx = idx
+                    st.info(f"Jumped to image #{idx} — switch to Image Viewer tab")
 
 
 # ============================================================================
