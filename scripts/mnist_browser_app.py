@@ -12,7 +12,7 @@ project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
 from src.common.data_io import load_mnist_idx
-from src.browser import TaggingSession, hash_image, image_to_base64, resize_image, get_image_stats
+from src.browser import TaggingSession, hash_image, resize_image, get_image_stats
 from src.browser.data_models import TaggedDataset
 
 
@@ -41,14 +41,14 @@ def load_dataset(dataset_type: str, dataset_path: str) -> Tuple[np.ndarray, Opti
     path_obj = Path(dataset_path)
     if not path_obj.exists():
         raise FileNotFoundError(f"Dataset path not found: {dataset_path}")
-    
+
     try:
         images, labels = load_mnist_idx(str(path_obj), kind="train")
-        return images, labels, f"Loaded {len(images)} training images"
+        return images, labels, f"Loaded {len(images)} training images ({dataset_type})"
     except Exception as e:
         try:
             images, labels = load_mnist_idx(str(path_obj), kind="t10k")
-            return images, labels, f"Loaded {len(images)} test images"
+            return images, labels, f"Loaded {len(images)} test images ({dataset_type})"
         except Exception as e2:
             raise ValueError(f"Could not load dataset: {str(e)} / {str(e2)}")
 
@@ -85,32 +85,74 @@ with st.sidebar:
     
     dataset_type = st.radio(
         "Choose dataset source:",
-        options=["Raw MNIST", "Load from File"],
-        help="Select which MNIST dataset to browse"
+        options=["Raw MNIST", "Load from File", "Load .npy file"],
+        help="Select which dataset to browse"
     )
-    
+
     if dataset_type == "Raw MNIST":
         dataset_path = str(project_root / "mnist_data")
         dataset_name = "raw_mnist"
-    else:  # Load from File
+    elif dataset_type == "Load from File":
         dataset_path = st.text_input(
             "Enter path to MNIST dataset folder:",
             placeholder="/path/to/mnist/data",
             help="Must contain train-images-idx3-ubyte and train-labels-idx1-ubyte"
         )
         dataset_name = "custom"
-    
+    else:  # Load .npy file
+        dataset_path = None
+        dataset_name = "npy"
+
+    # .npy file uploaders (shown only when relevant)
+    npy_images_file = None
+    npy_labels_file = None
+    if dataset_type == "Load .npy file":
+        npy_images_file = st.file_uploader(
+            "Upload images .npy (N×H×W or H×W):",
+            type=["npy"],
+            help="Float32 [0,1] or uint8 [0,255], shape (N, H, W) or (H, W) for a single image"
+        )
+        npy_labels_file = st.file_uploader(
+            "Upload labels .npy (optional):",
+            type=["npy"],
+            help="Integer array of shape (N,) matching the images"
+        )
+
     # Load dataset button
     if st.button("📂 Load Dataset", use_container_width=True, key="load_dataset_btn"):
         if dataset_type == "Load from File" and not dataset_path:
             st.error("Please enter a dataset path")
+        elif dataset_type == "Load .npy file" and npy_images_file is None:
+            st.error("Please upload a .npy images file")
         else:
             with st.spinner("Loading dataset..."):
                 try:
-                    images, labels, msg = load_dataset(dataset_type, dataset_path)
+                    if dataset_type == "Load .npy file":
+                        assert npy_images_file is not None  # guarded above
+                        raw = np.load(npy_images_file)
+                        if raw.ndim == 2:
+                            raw = raw[np.newaxis, ...]   # single image → (1, H, W)
+                        if raw.ndim != 3:
+                            raise ValueError(f"Expected 2D or 3D array, got shape {raw.shape}")
+                        # Normalise to uint8
+                        if raw.dtype != np.uint8:
+                            if raw.max() <= 1.0:
+                                raw = (raw * 255).clip(0, 255).astype(np.uint8)
+                            else:
+                                raw = raw.astype(np.uint8)
+                        images = raw
+                        labels = np.load(npy_labels_file) if npy_labels_file is not None else None
+                        file_name = npy_images_file.name
+                        msg = f"Loaded {len(images)} images from .npy ({images.shape[1]}×{images.shape[2]} px)"
+                        dataset_name = file_name
+                        source = file_name
+                    else:
+                        images, labels, msg = load_dataset(dataset_type, str(dataset_path))
+                        source = dataset_path or ""
+
                     st.session_state.images = images
                     st.session_state.labels = labels
-                    st.session_state.dataset_source = dataset_path
+                    st.session_state.dataset_source = source
                     st.session_state.dataset_name = dataset_name
                     st.session_state.current_image_idx = 0
                     st.session_state.session = TaggingSession(

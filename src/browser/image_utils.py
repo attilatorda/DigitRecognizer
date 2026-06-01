@@ -78,7 +78,11 @@ def resize_image(image_array: np.ndarray, size: Tuple[int, int] = (224, 224)) ->
     Returns:
         Resized numpy array
     """
-    pil_image = Image.fromarray(image_array.astype(np.uint8), mode='L')
+    if image_array.dtype != np.uint8:
+        u8 = (image_array * 255).clip(0, 255).astype(np.uint8) if image_array.max() <= 1.0 else image_array.astype(np.uint8)
+    else:
+        u8 = image_array
+    pil_image = Image.fromarray(u8, mode='L')
     resized = pil_image.resize(size, Image.Resampling.NEAREST)
     return np.array(resized, dtype=np.uint8)
 
@@ -107,12 +111,13 @@ def get_image_stats(image_array: np.ndarray) -> dict:
     Returns:
         Dictionary with stats (min, max, mean, std, shape)
     """
+    is_float = np.issubdtype(image_array.dtype, np.floating)
     return {
         "height": image_array.shape[0],
         "width": image_array.shape[1],
         "dtype": str(image_array.dtype),
-        "min": int(image_array.min()),
-        "max": int(image_array.max()),
+        "min": round(float(image_array.min()), 3) if is_float else int(image_array.min()),
+        "max": round(float(image_array.max()), 3) if is_float else int(image_array.max()),
         "mean": float(image_array.mean()),
         "std": float(image_array.std()),
         "size_bytes": image_array.nbytes,
