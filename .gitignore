@@ -16,6 +16,9 @@ mnist_data/
 experiments/checkpoints/
 experiments/logs/
 
+# Generated augmented training images (large, reproducible on demand)
+augmented_train/
+
 # Keep reports/configs tracked
 !experiments/reports/
 !experiments/configs/
