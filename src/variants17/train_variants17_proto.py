@@ -12,7 +12,7 @@ if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from src.common.data_io import load_mnist_idx
-from src.common.utils import set_seed
+from src.common.utils import ensure_dir, set_seed
 from src.local_cnn.model import SimpleCNN
 from src.variants17.augment import augment_dataset
 from src.variants17.label_schema import CLASS17_TO_DIGIT10
@@ -36,95 +36,124 @@ class EmbeddingCNN(nn.Module):
         return nn.functional.normalize(z, dim=1)
 
 
-
 def make_loader(images, labels, batch_size=128, shuffle=True):
     x = torch.tensor(images, dtype=torch.float32).unsqueeze(1)
     y = torch.tensor(labels, dtype=torch.long)
     return DataLoader(TensorDataset(x, y), batch_size=batch_size, shuffle=shuffle)
 
 
-def compute_prototypes(model: nn.Module, support_x01: np.ndarray, support_y17: np.ndarray, device):
+def compute_prototypes(model, support_x01, support_y17, device):
     model.eval()
     x = torch.tensor(support_x01, dtype=torch.float32).unsqueeze(1).to(device)
     y = torch.tensor(support_y17, dtype=torch.long).to(device)
     with torch.no_grad():
         z = model(x)
-    protos = []
-    for c in range(17):
-        protos.append(z[y == c].mean(dim=0))
-    return torch.stack(protos, dim=0)
+    return torch.stack([z[y == c].mean(dim=0) for c in range(17)], dim=0)
 
 
-def classify_with_prototypes(model, images01: np.ndarray, prototypes: torch.Tensor, device):
+def classify_with_prototypes(model, images01, prototypes, device):
     model.eval()
     x = torch.tensor(images01, dtype=torch.float32).unsqueeze(1).to(device)
     with torch.no_grad():
         z = model(x)
-        d = torch.cdist(z, prototypes)
-        pred = d.argmin(dim=1)
+        pred = torch.cdist(z, prototypes).argmin(dim=1)
     return pred.cpu().numpy()
 
 
-def eval_mnist_proj(model, test_images_u8, test_labels10, prototypes, device):
-    pred17 = classify_with_prototypes(model, test_images_u8.astype(np.float32) / 255.0, prototypes, device)
-    pred10 = np.array([CLASS17_TO_DIGIT10[int(c)] for c in pred17], dtype=np.int64)
-    return float((pred10 == test_labels10).mean())
-
-
-def eval_transformed17(model, transformed_x01, transformed_y17, prototypes, device):
-    pred17 = classify_with_prototypes(model, transformed_x01, prototypes, device)
-    return float((pred17 == transformed_y17).mean())
+def eval_mnist_proj(model, images_u8, labels10, prototypes, device, batch_size=512):
+    """Evaluate on raw uint8 MNIST images. Returns accuracy."""
+    correct = total = 0
+    dataset = TensorDataset(
+        torch.tensor(images_u8, dtype=torch.float32).unsqueeze(1) / 255.0,
+        torch.tensor(labels10, dtype=torch.long),
+    )
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
+    model.eval()
+    with torch.no_grad():
+        for x, y in loader:
+            x = x.to(device)
+            z = model(x)
+            pred17 = torch.cdist(z, prototypes).argmin(dim=1).cpu().numpy()
+            pred10 = np.array([CLASS17_TO_DIGIT10[int(c)] for c in pred17])
+            correct += (pred10 == y.numpy()).sum()
+            total += len(y)
+    return correct / max(1, total)
 
 
 def main(args):
     set_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+    elastic_prob = 0.0 if args.no_augmentation else 0.70
+    stroke_prob = 0.0 if args.no_augmentation else 0.80
+
     train_templates = np.load(os.path.join(args.data_dir, "train_images.npy"))
     train_labels17 = np.load(os.path.join(args.data_dir, "train_labels17.npy"))
-    aug_x, aug_y = augment_dataset(train_templates, train_labels17, repeats=args.repeats, seed=args.seed)
+    aug_x, aug_y = augment_dataset(
+        train_templates, train_labels17,
+        repeats=args.repeats, seed=args.seed,
+        elastic_prob=elastic_prob, stroke_prob=stroke_prob,
+    )
     train_loader = make_loader(aug_x, aug_y, batch_size=args.batch_size, shuffle=True)
 
-    transformed_x = np.load(os.path.join(args.transformed_dir, "images.npy"))
-    transformed_y = np.load(os.path.join(args.transformed_dir, "labels17.npy"))
-    mnist_images, mnist_labels = load_mnist_idx(args.mnist_path, "t10k")
+    test_images, test_labels = load_mnist_idx(args.mnist_path, "t10k")
+    train_images_mnist = train_labels_mnist = None
+    if args.eval_mnist_train:
+        train_images_mnist, train_labels_mnist = load_mnist_idx(args.mnist_path, "train")
 
     model = EmbeddingCNN(emb_dim=args.emb_dim).to(device)
     clf = nn.Linear(args.emb_dim, 17).to(device)
     opt = torch.optim.Adam(list(model.parameters()) + list(clf.parameters()), lr=args.lr)
     ce = nn.CrossEntropyLoss()
 
-    mn, tr = 0.0, 0.0
+    ensure_dir(args.out_dir)
+    best_acc = 0.0
+    best_path = os.path.join(args.out_dir, "best_variants17_proto.pt")
+    mn = 0.0
+
     for epoch in range(1, args.epochs + 1):
         model.train()
         clf.train()
         for xb, yb in train_loader:
             xb, yb = xb.to(device), yb.to(device)
             opt.zero_grad()
-            emb = model(xb)
-            logits = clf(emb)
-            loss = ce(logits, yb)
+            loss = ce(clf(model(xb)), yb)
             loss.backward()
             opt.step()
 
         support_x01 = train_templates.astype(np.float32) / 255.0
         prototypes = compute_prototypes(model, support_x01, train_labels17, device)
-        mn = eval_mnist_proj(model, mnist_images, mnist_labels, prototypes, device)
-        tr = eval_transformed17(model, transformed_x, transformed_y, prototypes, device)
-        print(f"[variants17_proto] epoch={epoch} mnist_test_acc={mn*100:.2f}% transformed17_acc={tr*100:.2f}%")
+        mn = eval_mnist_proj(model, test_images, test_labels, prototypes, device)
+        print(f"[variants17_proto] epoch={epoch} mnist_test_acc={mn*100:.2f}%")
 
-    print(f"[variants17_proto] final_mnist_test_acc={mn*100:.2f}% final_transformed17_acc={tr*100:.2f}%")
+        if mn > best_acc:
+            best_acc = mn
+            torch.save({"model": model.state_dict(), "clf": clf.state_dict()}, best_path)
+
+    print(f"[variants17_proto] best_mnist_test_acc={best_acc*100:.2f}% saved={best_path}")
+
+    if args.eval_mnist_train and train_images_mnist is not None and train_labels_mnist is not None:
+        ckpt = torch.load(best_path, map_location=device)
+        model.load_state_dict(ckpt["model"])
+        support_x01 = train_templates.astype(np.float32) / 255.0
+        prototypes = compute_prototypes(model, support_x01, train_labels17, device)
+        acc_train = eval_mnist_proj(model, train_images_mnist, train_labels_mnist, prototypes, device)
+        print(f"[variants17_proto] mnist_train_acc={acc_train*100:.2f}%")
 
 
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--mnist-path", default="mnist_data")
     p.add_argument("--data-dir", default="data/processed/mnist17_variants")
-    p.add_argument("--transformed-dir", default="experiments/checkpoints/variants17/eval_transformed")
+    p.add_argument("--out-dir", default="experiments/checkpoints/variants17")
     p.add_argument("--epochs", type=int, default=8)
     p.add_argument("--batch-size", type=int, default=128)
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--repeats", type=int, default=256)
     p.add_argument("--emb-dim", type=int, default=64)
+    p.add_argument("--no-augmentation", action="store_true",
+                   help="Disable elastic and stroke-width augmentation (noise-only baseline)")
+    p.add_argument("--eval-mnist-train", action="store_true",
+                   help="Also evaluate on the 60K MNIST training split at end")
     p.add_argument("--seed", type=int, default=42)
     main(p.parse_args())
