@@ -154,25 +154,54 @@ def make_fig3(results_path: str, out_path: str = ""):
     configs = {r["name"]: r for r in data["configs"]}
     supervised = (data.get("local_cnn_acc") or 0.9911) * 100
 
-    labels  = ["Nearest\ntemplate\n(L2)", "No-aug\nCNN", "Full-aug\nCNN", "Proto\nembedding"]
-    means   = [nearest,
-               configs["no_aug_cnn"]["mean_test_acc"] * 100,
-               configs["full_aug_cnn"]["mean_test_acc"] * 100,
-               configs["proto"]["mean_test_acc"] * 100]
-    stds    = [0,
-               configs["no_aug_cnn"]["std_test_acc"] * 100,
-               configs["full_aug_cnn"]["std_test_acc"] * 100,
-               configs["proto"]["std_test_acc"] * 100]
-    colors  = ["#8ab4c9", "#8ab4c9", "#4a90c4", "#1a5f9e"]
+    has_ablation = "elastic_only_cnn" in configs and "stroke_only_cnn" in configs
 
-    fig, ax = plt.subplots(figsize=(6.5, 3.8))
+    if has_ablation:
+        labels = [
+            "Nearest\ntemplate\n(L2)",
+            "No-aug\nCNN",
+            "Elastic\nonly",
+            "Stroke\nonly",
+            "Full-aug\nCNN",
+            "Proto\nembedding",
+        ]
+        means = [
+            nearest,
+            configs["no_aug_cnn"]["mean_test_acc"] * 100,
+            configs["elastic_only_cnn"]["mean_test_acc"] * 100,
+            configs["stroke_only_cnn"]["mean_test_acc"] * 100,
+            configs["full_aug_cnn"]["mean_test_acc"] * 100,
+            configs["proto"]["mean_test_acc"] * 100,
+        ]
+        stds = [
+            0,
+            configs["no_aug_cnn"]["std_test_acc"] * 100,
+            configs["elastic_only_cnn"]["std_test_acc"] * 100,
+            configs["stroke_only_cnn"]["std_test_acc"] * 100,
+            configs["full_aug_cnn"]["std_test_acc"] * 100,
+            configs["proto"]["std_test_acc"] * 100,
+        ]
+        colors = ["#8ab4c9", "#b0cfe0", "#7aafcc", "#5a9fbc", "#4a90c4", "#1a5f9e"]
+    else:
+        labels = ["Nearest\ntemplate\n(L2)", "No-aug\nCNN", "Full-aug\nCNN", "Proto\nembedding"]
+        means  = [nearest,
+                  configs["no_aug_cnn"]["mean_test_acc"] * 100,
+                  configs["full_aug_cnn"]["mean_test_acc"] * 100,
+                  configs["proto"]["mean_test_acc"] * 100]
+        stds   = [0,
+                  configs["no_aug_cnn"]["std_test_acc"] * 100,
+                  configs["full_aug_cnn"]["std_test_acc"] * 100,
+                  configs["proto"]["std_test_acc"] * 100]
+        colors = ["#8ab4c9", "#8ab4c9", "#4a90c4", "#1a5f9e"]
+
+    fig, ax = plt.subplots(figsize=(8.5 if has_ablation else 6.5, 3.8))
     bars = ax.bar(labels, means, yerr=stds, capsize=4,
                   color=colors, edgecolor="white", linewidth=0.5,
                   error_kw={"elinewidth": 1.2, "ecolor": "#333"})
 
     # Supervised reference line
     ax.axhline(supervised, color="#c0392b", linewidth=1.4, linestyle="--", zorder=3)
-    ax.text(3.55, supervised + 0.5, f"Supervised CNN\n{supervised:.1f}%",
+    ax.text(len(labels) - 0.45, supervised + 0.5, f"Supervised CNN\n{supervised:.1f}%",
             color="#c0392b", fontsize=8.5, va="bottom", ha="right")
 
     # Value labels on bars
