@@ -35,7 +35,7 @@ def image_to_base64(image_array: np.ndarray) -> str:
     """
     # Ensure uint8
     if image_array.dtype != np.uint8:
-        image_array = (image_array * 255).astype(np.uint8) if image_array.max() <= 1 else image_array.astype(np.uint8)
+        image_array = (image_array * 255).clip(0, 255).astype(np.uint8) if image_array.max() <= 1.0 else image_array.astype(np.uint8)
     
     # Convert to PIL Image and encode as PNG
     pil_image = Image.fromarray(image_array, mode='L')

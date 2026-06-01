@@ -1,7 +1,7 @@
 """Pydantic models for tagged MNIST dataset schema."""
 
-from typing import List, Optional, Dict, Any
-from datetime import datetime
+from typing import List, Optional
+from datetime import datetime, timezone
 from pydantic import BaseModel, Field
 import uuid
 
@@ -55,7 +55,7 @@ class DatasetMetadata(BaseModel):
     """Metadata for the entire tagged dataset."""
     
     version: str = Field(default="1.0", description="Format version")
-    created_at: datetime = Field(default_factory=datetime.utcnow, description="Creation timestamp")
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), description="Creation timestamp")
     total_images: int = Field(..., description="Number of images in dataset")
     image_height: int = Field(default=28, description="Image height in pixels")
     image_width: int = Field(default=28, description="Image width in pixels")
