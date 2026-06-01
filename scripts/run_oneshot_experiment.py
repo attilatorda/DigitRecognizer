@@ -50,6 +50,7 @@ from src.variants17.train_variants17_cnn import (
     build_transformed_eval_set,
     eval_on_mnist,
     eval_17class,
+    save_augmented_set,
 )
 from src.variants17.train_variants17_proto import (
     EmbeddingCNN,
@@ -103,6 +104,7 @@ def train_cnn_one_seed(
     train_images_mnist, train_labels_mnist,
     epochs, batch_size, lr, elastic_prob, stroke_prob,
     out_dir, device,
+    save_augmented_dir: str = "",
 ):
     set_seed(seed)
     aug_x, aug_y = augment_dataset(
@@ -110,6 +112,8 @@ def train_cnn_one_seed(
         repeats=256, seed=seed,
         elastic_prob=elastic_prob, stroke_prob=stroke_prob,
     )
+    if save_augmented_dir and seed == 0:
+        save_augmented_set(aug_x, aug_y, save_augmented_dir)
     loader = DataLoader(
         TensorDataset(
             torch.tensor(aug_x, dtype=torch.float32).unsqueeze(1),
@@ -161,6 +165,7 @@ def train_proto_one_seed(
     train_images_mnist, train_labels_mnist,
     epochs, batch_size, lr, emb_dim, elastic_prob, stroke_prob,
     out_dir, device,
+    save_augmented_dir: str = "",
 ):
     set_seed(seed)
     aug_x, aug_y = augment_dataset(
@@ -168,6 +173,8 @@ def train_proto_one_seed(
         repeats=256, seed=seed,
         elastic_prob=elastic_prob, stroke_prob=stroke_prob,
     )
+    if save_augmented_dir and seed == 0:
+        save_augmented_set(aug_x, aug_y, save_augmented_dir)
     loader = DataLoader(
         TensorDataset(
             torch.tensor(aug_x, dtype=torch.float32).unsqueeze(1),
@@ -362,12 +369,16 @@ def main(args):
         epochs=args.epochs, batch_size=args.batch_size, lr=args.lr, device=device,
     )
 
+    def _aug_dir(config_name):
+        return os.path.join(args.out_dir, config_name, "augmented_train")
+
     # 2. No-augmentation CNN
     results.append(run_config(
         "no_aug_cnn",
         lambda seed, **kw: train_cnn_one_seed(
             seed=seed, elastic_prob=0.0, stroke_prob=0.0,
-            out_dir=os.path.join(args.out_dir, "no_aug_cnn"), **kw,
+            out_dir=os.path.join(args.out_dir, "no_aug_cnn"),
+            save_augmented_dir=_aug_dir("no_aug_cnn"), **kw,
         ),
         seeds, **shared,
     ))
@@ -378,7 +389,8 @@ def main(args):
             "elastic_only_cnn",
             lambda seed, **kw: train_cnn_one_seed(
                 seed=seed, elastic_prob=args.elastic_prob, stroke_prob=0.0,
-                out_dir=os.path.join(args.out_dir, "elastic_only_cnn"), **kw,
+                out_dir=os.path.join(args.out_dir, "elastic_only_cnn"),
+                save_augmented_dir=_aug_dir("elastic_only_cnn"), **kw,
             ),
             seeds, **shared,
         ))
@@ -389,7 +401,8 @@ def main(args):
             "stroke_only_cnn",
             lambda seed, **kw: train_cnn_one_seed(
                 seed=seed, elastic_prob=0.0, stroke_prob=args.stroke_prob,
-                out_dir=os.path.join(args.out_dir, "stroke_only_cnn"), **kw,
+                out_dir=os.path.join(args.out_dir, "stroke_only_cnn"),
+                save_augmented_dir=_aug_dir("stroke_only_cnn"), **kw,
             ),
             seeds, **shared,
         ))
@@ -399,7 +412,8 @@ def main(args):
         "full_aug_cnn",
         lambda seed, **kw: train_cnn_one_seed(
             seed=seed, elastic_prob=args.elastic_prob, stroke_prob=args.stroke_prob,
-            out_dir=os.path.join(args.out_dir, "full_aug_cnn"), **kw,
+            out_dir=os.path.join(args.out_dir, "full_aug_cnn"),
+            save_augmented_dir=_aug_dir("full_aug_cnn"), **kw,
         ),
         seeds, **shared,
     ))
@@ -411,7 +425,8 @@ def main(args):
         lambda seed, **kw: train_proto_one_seed(
             seed=seed, emb_dim=args.emb_dim,
             elastic_prob=args.elastic_prob, stroke_prob=args.stroke_prob,
-            out_dir=os.path.join(args.out_dir, "proto"), **kw,
+            out_dir=os.path.join(args.out_dir, "proto"),
+            save_augmented_dir=_aug_dir("proto"), **kw,
         ),
         proto_seeds, **shared,
     ))

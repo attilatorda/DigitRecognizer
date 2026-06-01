@@ -5,6 +5,7 @@ import sys
 
 import numpy as np
 import torch
+from PIL import Image, ImageDraw, ImageFont
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -16,7 +17,53 @@ from src.common.data_io import load_mnist_idx
 from src.common.utils import ensure_dir, set_seed
 from src.local_cnn.model import SimpleCNN
 from src.variants17.augment import apply_augmentation, augment_dataset, sample_augmentation_params
-from src.variants17.label_schema import CLASS17_TO_DIGIT10
+from src.variants17.label_schema import CLASS17_TO_DIGIT10, LABELS_17
+
+
+def save_augmented_set(
+    aug_x: np.ndarray,
+    aug_y: np.ndarray,
+    out_dir: str,
+    n_per_class: int = 8,
+    scale: int = 4,
+) -> None:
+    """Save augmented training images as .npy files and a labelled preview grid."""
+    ensure_dir(out_dir)
+    np.save(os.path.join(out_dir, "images.npy"), aug_x)
+    np.save(os.path.join(out_dir, "labels17.npy"), aug_y)
+
+    # Build preview: 17 rows × n_per_class columns
+    cell = 28 * scale
+    label_h = 14
+    pad = 4
+    gap = 3
+    n_cols = n_per_class
+    n_rows = 17
+    canvas_w = n_cols * cell + (n_cols - 1) * gap + 2 * pad
+    canvas_h = n_rows * (cell + label_h + gap) + 2 * pad
+    canvas = Image.new("L", (canvas_w, canvas_h), color=40)
+    draw = ImageDraw.Draw(canvas)
+    try:
+        font = ImageFont.truetype("arial.ttf", 10)
+    except OSError:
+        font = ImageFont.load_default()
+
+    rng = np.random.default_rng(0)
+    for class_id in range(17):
+        mask = aug_y == class_id
+        indices = np.where(mask)[0]
+        chosen = rng.choice(indices, size=min(n_cols, len(indices)), replace=False)
+        row = class_id
+        y0 = pad + row * (cell + label_h + gap)
+        draw.text((pad, y0), LABELS_17[class_id].replace("_", " "), fill=180, font=font)
+        for col, idx in enumerate(chosen):
+            x0 = pad + col * (cell + gap)
+            img_u8 = (aug_x[idx] * 255).clip(0, 255).astype(np.uint8)
+            cell_img = Image.fromarray(img_u8).resize((cell, cell), Image.Resampling.NEAREST)
+            canvas.paste(cell_img, (x0, y0 + label_h))
+
+    canvas.save(os.path.join(out_dir, "preview.png"))
+    print(f"[variants17_cnn] augmented_train saved: {out_dir} ({len(aug_x)} images + preview.png)")
 
 
 def build_transformed_eval_set(
@@ -89,6 +136,9 @@ def main(args):
         elastic_prob=elastic_prob, stroke_prob=stroke_prob,
     )
 
+    if not args.no_save_augmented:
+        save_augmented_set(aug_x, aug_y, os.path.join(args.out_dir, "augmented_train"))
+
     transformed_x, transformed_y17, transform_logs = build_transformed_eval_set(
         train_templates, per_class=args.eval_transforms_per_class,
         seed=args.seed, elastic_prob=elastic_prob, stroke_prob=stroke_prob,
@@ -154,6 +204,8 @@ if __name__ == "__main__":
     parser.add_argument("--eval-transforms-per-class", type=int, default=20)
     parser.add_argument("--elastic-prob", type=float, default=0.70)
     parser.add_argument("--stroke-prob", type=float, default=0.80)
+    parser.add_argument("--no-save-augmented", action="store_true",
+                        help="Skip saving augmented training images (default: saves to {out_dir}/augmented_train/)")
     parser.add_argument("--no-augmentation", action="store_true",
                         help="Disable elastic and stroke-width augmentation (noise-only baseline)")
     parser.add_argument("--eval-mnist-train", action="store_true",
