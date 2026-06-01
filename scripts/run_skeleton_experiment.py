@@ -109,6 +109,8 @@ def run_config(
     device: torch.device,
     out_dir: str,
     skeletonize_time_s: float,
+    method_label: str = "",
+    channel_label: str = "",
 ) -> dict:
     print(f"\n[experiment] === {config_name} ===", flush=True)
     ensure_dir(out_dir)
@@ -142,14 +144,16 @@ def run_config(
 
     return {
         "name": config_name,
+        "method_label": method_label or config_name,
+        "channel_label": channel_label or config_name,
         "seeds": seeds,
         "best_test_accs": [float(a) for a in best_accs],
         "mean_test_acc": mean_acc,
         "std_test_acc": std_acc,
         "skeletonize_time_s": skeletonize_time_s,
         "mean_train_time_s": float(np.mean(train_times)),
-        "per_class_accs_per_seed": [{int(k): v for k, v in pc.items()} for pc in per_class_list],
-        "mean_per_class_acc": {int(k): v for k, v in mean_per_class.items()},
+        "per_class_accs_per_seed": [{str(k): v for k, v in pc.items()} for pc in per_class_list],
+        "mean_per_class_acc": {str(k): v for k, v in mean_per_class.items()},
     }
 
 
@@ -171,14 +175,8 @@ def write_markdown(results: list[dict], path: str):
     ]
 
     for r in results:
-        name = r["name"]
-        if name == "raw":
-            method, channel = "raw", "raw"
-        else:
-            # config names are always "{method}_{skeleton|hough}"
-            last_sep = name.rfind("_")
-            method = name[:last_sep]
-            channel = "skeleton+hough" if name[last_sep + 1:] == "hough" else "skeleton"
+        method = r.get("method_label", r["name"])
+        channel = r.get("channel_label", r["name"])
         skel_t = f"{r['skeletonize_time_s']:.0f}" if r["skeletonize_time_s"] > 0 else "—"
         lines.append(
             f"| {method} | {channel} | {r['mean_test_acc']*100:.2f} "
@@ -226,20 +224,22 @@ def main(args):
     results = []
 
     # --- raw baseline ---
-    print("\n[experiment] === raw (baseline) ===", flush=True)
+    if not args.skip_raw:
+        print("\n[experiment] === raw (baseline) ===", flush=True)
 
-    def raw_loaders(_seed):
-        return (
-            raw_to_loader(train_raw, train_labels, args.batch_size, shuffle=True),
-            raw_to_loader(test_raw, test_labels, args.batch_size, shuffle=False),
-        )
+        def raw_loaders(_seed):
+            return (
+                raw_to_loader(train_raw, train_labels, args.batch_size, shuffle=True),
+                raw_to_loader(test_raw, test_labels, args.batch_size, shuffle=False),
+            )
 
-    results.append(run_config(
-        "raw", raw_loaders, seeds, args.epochs, args.lr,
-        in_channels=1, device=device,
-        out_dir=os.path.join(args.out_dir, "raw"),
-        skeletonize_time_s=0.0,
-    ))
+        results.append(run_config(
+            "raw", raw_loaders, seeds, args.epochs, args.lr,
+            in_channels=1, device=device,
+            out_dir=os.path.join(args.out_dir, "raw"),
+            skeletonize_time_s=0.0,
+            method_label="raw", channel_label="raw",
+        ))
 
     # --- skeleton configs ---
     for method in methods:
@@ -253,21 +253,36 @@ def main(args):
         skel_time = t_train + t_test
 
         for ch_mode in channel_modes:
-            config_name = f"{method}_{'hough' if ch_mode == 'skeleton_hough' else 'skeleton'}"
+            if ch_mode == "raw_thin":
+                config_name = f"{method}_fusion"
+                channel_label = "raw+skeleton"
+            elif ch_mode == "skeleton_hough":
+                config_name = f"{method}_hough"
+                channel_label = "skeleton+hough"
+            else:
+                config_name = f"{method}_skeleton"
+                channel_label = "skeleton"
             in_ch = 1 if ch_mode == "skeleton" else 2
 
-            def make_loaders(_seed, _tr=train_skel, _te=test_skel, _ch=ch_mode):
+            def make_loaders(
+                _seed,
+                _tr=train_skel, _te=test_skel, _ch=ch_mode,
+                _rtr=train_raw if ch_mode == "raw_thin" else None,
+                _rte=test_raw if ch_mode == "raw_thin" else None,
+            ):
                 return (
                     skeleton_to_loader(_tr, train_labels, args.batch_size, shuffle=True,
                                        channel_mode=_ch,
                                        hough_threshold=args.hough_threshold,
                                        hough_line_length=args.hough_line_length,
-                                       hough_line_gap=args.hough_line_gap),
+                                       hough_line_gap=args.hough_line_gap,
+                                       raw_images=_rtr),
                     skeleton_to_loader(_te, test_labels, args.batch_size, shuffle=False,
                                        channel_mode=_ch,
                                        hough_threshold=args.hough_threshold,
                                        hough_line_length=args.hough_line_length,
-                                       hough_line_gap=args.hough_line_gap),
+                                       hough_line_gap=args.hough_line_gap,
+                                       raw_images=_rte),
                 )
 
             results.append(run_config(
@@ -275,22 +290,32 @@ def main(args):
                 in_channels=in_ch, device=device,
                 out_dir=os.path.join(args.out_dir, config_name),
                 skeletonize_time_s=skel_time,
+                method_label=method, channel_label=channel_label,
             ))
 
-    # --- save results ---
+    # --- save results (merge with existing if present) ---
     json_path = os.path.join(args.report_dir, "skeleton_comparison.json")
+    if os.path.exists(json_path):
+        with open(json_path, encoding="utf-8") as f:
+            existing = json.load(f)
+        new_by_name = {r["name"]: r for r in results}
+        merged = [new_by_name.pop(e["name"], e) for e in existing]
+        merged.extend(new_by_name.values())  # append genuinely new configs
+        results_to_save = merged
+    else:
+        results_to_save = results
     with open(json_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, indent=2)
+        json.dump(results_to_save, f, indent=2)
     print(f"[experiment] results saved: {json_path}")
 
     md_path = os.path.join(args.report_dir, "skeleton_comparison.md")
-    write_markdown(results, md_path)
+    write_markdown(results_to_save, md_path)
 
     # --- summary table to stdout ---
     print("\n=== SUMMARY ===")
     print(f"{'Config':<30} {'Mean acc':>10} {'Std':>8}")
     print("-" * 52)
-    for r in results:
+    for r in results_to_save:
         print(f"{r['name']:<30} {r['mean_test_acc']*100:>9.2f}%  +-{r['std_test_acc']*100:.2f}%")
 
 
@@ -308,7 +333,9 @@ if __name__ == "__main__":
     parser.add_argument("--methods", default="zhang,lee,thin,medial_axis",
                         help="Comma-separated skeleton methods to include")
     parser.add_argument("--channel-modes", default="skeleton,skeleton_hough",
-                        help="Comma-separated channel modes: skeleton, skeleton_hough")
+                        help="Comma-separated channel modes: skeleton, skeleton_hough, raw_thin")
+    parser.add_argument("--skip-raw", action="store_true",
+                        help="Skip the raw-pixel baseline (use when baseline results already exist)")
     parser.add_argument("--hough-threshold", type=int, default=8)
     parser.add_argument("--hough-line-length", type=int, default=5)
     parser.add_argument("--hough-line-gap", type=int, default=2)

@@ -2,7 +2,8 @@
 ## A Systematic Comparison of Four Thinning Algorithms
 
 **Date:** 2026-06-01  
-**Setup:** SimpleCNN, MNIST 70K, 5 epochs, 3 seeds (0–2), CPU
+**Setup:** SimpleCNN, MNIST 70K, 5 epochs, 3 seeds (0–2), CPU  
+**Experiment 2 (fusion):** raw pixels + Guo-Hall skeleton as two-channel input
 
 ---
 
@@ -69,7 +70,32 @@ All skeleton methods fall below raw. The best skeleton result (thin+hough,
 98.12%) is ~0.9 pp below raw (99.03%). All differences exceed two standard
 deviations, indicating the gap is reliable.
 
-### 3.2 Per-class accuracy — mean over seeds (%)
+### 3.2 Fusion experiment: raw pixels + Guo-Hall skeleton (two-channel input)
+
+The best skeleton algorithm (thin/Guo-Hall) was combined with raw pixels as a
+two-channel CNN input: channel 0 = raw pixels, channel 1 = Guo-Hall skeleton.
+
+| Config | Mean acc (%) | Std (%) | vs raw | vs thin-only |
+|---|---:|---:|---:|---:|
+| raw (baseline) | 99.03 | 0.06 | — | — |
+| thin (skeleton only) | 98.11 | 0.09 | −0.92 pp | — |
+| **thin_fusion (raw + skeleton)** | **98.98** | **0.05** | **−0.05 pp** | **+0.87 pp** |
+
+The fusion recovers 0.87 of the 0.92 pp lost by skeleton-only. The remaining
+gap to raw (0.05 pp) is within one standard deviation and is not statistically
+significant.
+
+Per-class accuracy (thin_fusion, mean over seeds, %):
+
+| 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 99.7 | 99.8 | 99.0 | 99.2 | 99.3 | 98.9 | 98.3 | 99.2 | 98.3 | 98.1 |
+
+The fusion recovers the per-class losses almost entirely. Digit 8 goes from
+95.7% (zhang skeleton) / 97.6% (thin skeleton) back to 98.3% — very close to
+raw's 98.8%.
+
+### 3.3 Per-class accuracy — mean over seeds (%)
 
 | Digit | raw | zhang | zhang+H | lee | lee+H | thin | thin+H | medial | medial+H |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
@@ -124,7 +150,23 @@ exact distance-transform centerline, which is mathematically well-defined but
 produces very sparse, fragmented skeletons for MNIST's short strokes, confusing
 the CNN.
 
-### Finding 3 — Hough line features provide no measurable benefit
+### Finding 3 — Raw + skeleton fusion matches raw; skeleton is redundant given raw
+
+Adding the Guo-Hall skeleton as a second channel alongside raw pixels (98.98%,
+±0.05%) produces results statistically indistinguishable from raw alone
+(99.03%, ±0.06%). The 0.05 pp gap is within one standard deviation.
+
+This is the sharpest result of the paper. It confirms that **the CNN extracts
+the same topological information from raw pixels that the skeleton makes
+explicit.** The skeleton channel is redundant once the raw pixel channel is
+present. The information the skeleton adds is already learnable directly; the
+information the skeleton removes (stroke width) is the only part that mattered.
+
+The fusion also reduces variance (std 0.05% vs 0.09% for thin-only), suggesting
+the two channels provide complementary signals during training even if the final
+accuracy is equivalent.
+
+### Finding 4 — Hough line features provide no measurable benefit
 
 Adding the probabilistic Hough line map as a second input channel changes
 accuracy by at most ±0.01 pp for zhang, lee, and thin — indistinguishable from
@@ -134,7 +176,7 @@ the explicit Hough feature. The second channel adds computational overhead
 (Hough transform per image at inference time) for no gain; it should not be
 used in this configuration.
 
-### Finding 4 — Digits 3, 5, 8 are the biggest losers; digit 0 is unaffected
+### Finding 5 — Digits 3, 5, 8 are the biggest losers; digit 0 is unaffected
 
 The per-class breakdown reveals which digits rely most heavily on stroke width:
 
@@ -150,7 +192,7 @@ The per-class breakdown reveals which digits rely most heavily on stroke width:
 - **Digit `1`** also shows small loss (−0.3 pp for thin), which makes sense:
   a vertical stroke skeletonizes almost perfectly, leaving topology intact.
 
-### Finding 5 — Preprocessing time spans four orders of magnitude
+### Finding 6 — Preprocessing time spans four orders of magnitude
 
 | Method | 70K images | Per image |
 |---|---:|---:|
@@ -168,18 +210,31 @@ completely impractical. Lee and Zhang are both viable for online use.
 ## 5. Conclusions
 
 **Skeletonization does not improve MNIST digit recognition accuracy with a
-standard CNN when training on the full 60K training set.** All four algorithms
-produce measurably lower accuracy than raw pixels, with the gap ranging from
-0.9 pp (thin) to 1.2 pp (zhang).
+standard CNN, either as a replacement for raw pixels or as an additional
+channel.** The experiments produce three clear results:
 
-The ranking of algorithms is: **thin ≈ lee > medial_axis > zhang** for
-accuracy; **zhang ≈ lee >> thin >> medial_axis** for preprocessing speed.
-For a practical deployment where skeleton preprocessing is required (e.g., for
-reasons of memory or downstream analysis), `lee` is the recommended choice:
-it achieves 98.02% with only 8 seconds of one-time preprocessing.
+1. **Skeleton only costs ~1 pp.** All four algorithms underperform raw pixels
+   (gap: 0.9–1.2 pp). The loss comes from discarding stroke-width gradients
+   that the CNN uses as discriminative signal.
 
-Adding Hough line features as a second input channel provides no benefit and
-should not be used with these skeletonization methods.
+2. **Raw + skeleton fusion matches raw alone.** Combining Guo-Hall skeleton
+   with raw pixels (98.98% ± 0.05%) is statistically indistinguishable from
+   raw alone (99.03% ± 0.06%). The CNN already learns the skeleton's topological
+   features implicitly from raw pixels; the explicit skeleton channel is
+   redundant.
+
+3. **Hough line features add nothing.** An explicit line-orientation channel
+   provides ≤0.01 pp change across all methods.
+
+The unified conclusion: **the information that skeletonization makes explicit
+is already learnable from raw pixels. The information it destroys (stroke width)
+is not recoverable, and it is the only part that matters for in-distribution
+MNIST accuracy.**
+
+For the algorithm ranking: **thin ≈ lee > medial_axis > zhang** for accuracy;
+**zhang ≈ lee >> thin >> medial_axis** for speed. If skeletonization is
+required for a downstream reason (morphological analysis, compactness), `lee`
+is the recommended choice: 98.02% at 8 seconds preprocessing time.
 
 ---
 

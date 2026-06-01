@@ -48,6 +48,7 @@ def build_input_tensor(
     hough_threshold: int,
     hough_line_length: int,
     hough_line_gap: int,
+    raw_images: np.ndarray | None = None,
 ) -> torch.Tensor:
     if channel_mode == "skeleton":
         x_np = images[:, None, :, :].astype(np.float32) / 255.0
@@ -61,6 +62,11 @@ def build_input_tensor(
             axis=0,
         )
         x_np = np.stack([images, hough_maps], axis=1).astype(np.float32) / 255.0
+    elif channel_mode == "raw_thin":
+        # Ch0 = raw pixels, Ch1 = Guo-Hall (thin) skeleton
+        if raw_images is None:
+            raise ValueError("raw_images must be provided for channel_mode='raw_thin'")
+        x_np = np.stack([raw_images, images], axis=1).astype(np.float32) / 255.0
     else:
         raise ValueError(f"Unsupported channel_mode: {channel_mode}")
     return torch.tensor(x_np, dtype=torch.float32)
@@ -75,8 +81,10 @@ def to_loader(
     hough_threshold: int = 8,
     hough_line_length: int = 5,
     hough_line_gap: int = 2,
+    raw_images: np.ndarray | None = None,
 ) -> DataLoader:
-    x = build_input_tensor(images, channel_mode, hough_threshold, hough_line_length, hough_line_gap)
+    x = build_input_tensor(images, channel_mode, hough_threshold, hough_line_length, hough_line_gap,
+                           raw_images=raw_images)
     y = torch.tensor(labels, dtype=torch.long)
     return DataLoader(TensorDataset(x, y), batch_size=batch_size, shuffle=shuffle)
 
@@ -136,12 +144,16 @@ def main(args):
         args.cache_dir, args.skeletonize_progress_every,
     )
 
+    raw_tr = train_images if args.channel_mode == "raw_thin" else None
+    raw_te = test_images if args.channel_mode == "raw_thin" else None
+
     train_loader = to_loader(
         train_skel, train_labels, args.batch_size, shuffle=True,
         channel_mode=args.channel_mode,
         hough_threshold=args.hough_threshold,
         hough_line_length=args.hough_line_length,
         hough_line_gap=args.hough_line_gap,
+        raw_images=raw_tr,
     )
     test_loader = to_loader(
         test_skel, test_labels, args.batch_size, shuffle=False,
@@ -149,6 +161,7 @@ def main(args):
         hough_threshold=args.hough_threshold,
         hough_line_length=args.hough_line_length,
         hough_line_gap=args.hough_line_gap,
+        raw_images=raw_te,
     )
 
     in_channels = 1 if args.channel_mode == "skeleton" else 2
@@ -192,7 +205,7 @@ if __name__ == "__main__":
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument(
         "--channel-mode",
-        choices=["skeleton", "skeleton_hough"],
+        choices=["skeleton", "skeleton_hough", "raw_thin"],
         default="skeleton",
     )
     parser.add_argument("--hough-threshold", type=int, default=8)
