@@ -14,6 +14,7 @@ if ROOT not in sys.path:
 from src.common.data_io import load_mnist_idx
 from src.common.utils import set_seed
 from src.local_cnn.model import SimpleCNN
+from src.variants17.augment import augment_dataset
 from src.variants17.label_schema import CLASS17_TO_DIGIT10
 
 
@@ -34,18 +35,6 @@ class EmbeddingCNN(nn.Module):
         z = self.embed_head(z)
         return nn.functional.normalize(z, dim=1)
 
-
-def augment_templates(images: np.ndarray, labels: np.ndarray, repeats: int, noise_std: float, seed: int):
-    rng = np.random.default_rng(seed)
-    x = images.astype(np.float32) / 255.0
-    X, Y = [], []
-    for img, y in zip(x, labels):
-        for _ in range(repeats):
-            jitter = rng.normal(0.0, noise_std, size=img.shape).astype(np.float32)
-            sample = np.clip(img + jitter, 0.0, 1.0)
-            X.append(sample)
-            Y.append(y)
-    return np.stack(X, axis=0), np.array(Y, dtype=np.int64)
 
 
 def make_loader(images, labels, batch_size=128, shuffle=True):
@@ -93,7 +82,7 @@ def main(args):
 
     train_templates = np.load(os.path.join(args.data_dir, "train_images.npy"))
     train_labels17 = np.load(os.path.join(args.data_dir, "train_labels17.npy"))
-    aug_x, aug_y = augment_templates(train_templates, train_labels17, args.repeats, args.noise_std, args.seed)
+    aug_x, aug_y = augment_dataset(train_templates, train_labels17, repeats=args.repeats, seed=args.seed)
     train_loader = make_loader(aug_x, aug_y, batch_size=args.batch_size, shuffle=True)
 
     transformed_x = np.load(os.path.join(args.transformed_dir, "images.npy"))
@@ -105,6 +94,7 @@ def main(args):
     opt = torch.optim.Adam(list(model.parameters()) + list(clf.parameters()), lr=args.lr)
     ce = nn.CrossEntropyLoss()
 
+    mn, tr = 0.0, 0.0
     for epoch in range(1, args.epochs + 1):
         model.train()
         clf.train()
@@ -135,7 +125,6 @@ if __name__ == "__main__":
     p.add_argument("--batch-size", type=int, default=128)
     p.add_argument("--lr", type=float, default=1e-3)
     p.add_argument("--repeats", type=int, default=256)
-    p.add_argument("--noise-std", type=float, default=0.04)
     p.add_argument("--emb-dim", type=int, default=64)
     p.add_argument("--seed", type=int, default=42)
     main(p.parse_args())

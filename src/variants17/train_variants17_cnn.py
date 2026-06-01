@@ -5,8 +5,6 @@ import sys
 
 import numpy as np
 import torch
-from skimage.morphology import dilation, erosion
-from skimage.transform import AffineTransform, rotate, warp
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
 
@@ -17,52 +15,16 @@ if ROOT not in sys.path:
 from src.common.data_io import load_mnist_idx
 from src.common.utils import ensure_dir, set_seed
 from src.local_cnn.model import SimpleCNN
+from src.variants17.augment import apply_augmentation, augment_dataset, sample_augmentation_params
 from src.variants17.label_schema import CLASS17_TO_DIGIT10
-
-
-def augment_templates(images: np.ndarray, labels: np.ndarray, repeats: int = 256, noise_std: float = 0.04):
-    x = images.astype(np.float32) / 255.0
-    X, Y = [], []
-    rng = np.random.default_rng(42)
-    for img, y in zip(x, labels):
-        for _ in range(repeats):
-            jitter = rng.normal(0.0, noise_std, size=img.shape).astype(np.float32)
-            sample = np.clip(img + jitter, 0.0, 1.0)
-            X.append(sample)
-            Y.append(y)
-    return np.stack(X, axis=0), np.array(Y, dtype=np.int64)
-
-
-def _apply_controlled_transform(img01: np.ndarray, params: dict, rng: np.random.Generator) -> np.ndarray:
-    out = img01
-
-    out = rotate(
-        out,
-        angle=float(params["rotation_deg"]),
-        resize=False,
-        mode="edge",
-        preserve_range=True,
-    )
-
-    tf = AffineTransform(scale=(float(params["stretch_x"]), float(params["stretch_y"])))
-    out = warp(out, tf.inverse, preserve_range=True, mode="edge", output_shape=out.shape)
-
-    fg = out > 0.3  # bright pixels are strokes (MNIST convention: white-on-black)
-    if params["thickness_op"] == "dilate":
-        fg = dilation(fg)
-    elif params["thickness_op"] == "erode":
-        fg = erosion(fg)
-    out = np.where(fg, np.maximum(out, 0.85), out)
-
-    noise = rng.normal(0.0, float(params["noise_std"]), size=out.shape).astype(np.float32)
-    out = np.clip(out + noise, 0.0, 1.0)
-    return out.astype(np.float32)
 
 
 def build_transformed_eval_set(
     templates_u8: np.ndarray,
     per_class: int,
     seed: int,
+    elastic_prob: float = 0.70,
+    stroke_prob: float = 0.80,
 ):
     rng = np.random.default_rng(seed)
     base = templates_u8.astype(np.float32) / 255.0
@@ -73,16 +35,10 @@ def build_transformed_eval_set(
 
     for class_id, template in enumerate(base):
         for sample_idx in range(per_class):
-            params = {
-                "class_id": int(class_id),
-                "sample_idx": int(sample_idx),
-                "rotation_deg": float(rng.uniform(-8.0, 8.0)),
-                "stretch_x": float(rng.uniform(0.92, 1.08)),
-                "stretch_y": float(rng.uniform(0.92, 1.08)),
-                "thickness_op": str(rng.choice(["none", "dilate", "erode"], p=[0.4, 0.3, 0.3])),
-                "noise_std": float(rng.uniform(0.01, 0.03)),
-            }
-            transformed = _apply_controlled_transform(template, params, rng)
+            params = sample_augmentation_params(rng, elastic_prob=elastic_prob, stroke_prob=stroke_prob)
+            params["class_id"] = int(class_id)
+            params["sample_idx"] = int(sample_idx)
+            transformed = apply_augmentation(template, params, rng)
             images.append(transformed)
             labels17.append(class_id)
             logs.append(params)
@@ -123,16 +79,24 @@ def main(args):
 
     train_templates = np.load(os.path.join(args.data_dir, "train_images.npy"))
     train_labels = np.load(os.path.join(args.data_dir, "train_labels17.npy"))
-    aug_x, aug_y = augment_templates(train_templates, train_labels, repeats=args.repeats, noise_std=args.noise_std)
+    aug_x, aug_y = augment_dataset(
+        train_templates,
+        train_labels,
+        repeats=args.repeats,
+        seed=args.seed,
+        elastic_prob=args.elastic_prob,
+        stroke_prob=args.stroke_prob,
+    )
 
     transformed_x, transformed_y17, transform_logs = build_transformed_eval_set(
         train_templates,
         per_class=args.eval_transforms_per_class,
         seed=args.seed,
+        elastic_prob=args.elastic_prob,
+        stroke_prob=args.stroke_prob,
     )
 
-    _, test_labels = load_mnist_idx(args.mnist_path, "t10k")
-    test_images, _ = load_mnist_idx(args.mnist_path, "t10k")
+    test_images, test_labels = load_mnist_idx(args.mnist_path, "t10k")
 
     train_loader = to_loader(aug_x, aug_y, batch_size=args.batch_size, shuffle=True)
 
@@ -187,7 +151,8 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--repeats", type=int, default=256)
-    parser.add_argument("--noise-std", type=float, default=0.04)
     parser.add_argument("--eval-transforms-per-class", type=int, default=20)
+    parser.add_argument("--elastic-prob", type=float, default=0.70)
+    parser.add_argument("--stroke-prob", type=float, default=0.80)
     parser.add_argument("--seed", type=int, default=42)
     main(parser.parse_args())
