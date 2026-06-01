@@ -25,3 +25,14 @@ augmented_train/
 
 # Private planning page
 milestones.html
+
+# LaTeX build artifacts (keep .tex, .bib, .pdf)
+experiments/reports/*.aux
+experiments/reports/*.log
+experiments/reports/*.out
+experiments/reports/*.bbl
+experiments/reports/*.blg
+experiments/reports/*.toc
+experiments/reports/*.fls
+experiments/reports/*.fdb_latexmk
+experiments/reports/*.synctex.gz
