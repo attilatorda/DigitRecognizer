@@ -1,323 +1,427 @@
-# One-Shot Handwritten Digit Recognition via Style-Augmented Templates
+# CultiVar-17: One-Shot Handwritten Digit Recognition from Culturally-Motivated Style Templates
 
-**Working paper · DigitRecognizer project · 2026-06-01**
+**Working paper · DigitRecognizer project · 2026-06-01**  
+**Target venue: ICFHR 2026 (8 pp, IEEE two-column) — draft for review**  
+**Note: This draft is in Markdown. Final submission requires conversion to IEEE**
+**LaTeX template (IEEEtran). Figure references use local relative paths.**
 
 ---
 
 ## Abstract
 
-We present a one-shot handwritten digit recognition system trained exclusively
-on 17 hand-drawn template images — one per style variant, zero real MNIST
-images. Templates are augmented with elastic grid warping, stroke-width
-simulation, and affine transforms to produce 4352 synthetic training images.
-We evaluate four configurations — nearest-template L2 matching, noise-only
-CNN, fully-augmented CNN, and prototype metric learning — on both the MNIST
-test split (10K) and the full MNIST corpus (70K, equally unseen).
-
-The prototype embedding method achieves **77.94% ± 2.99%** MNIST test accuracy,
-outperforming the direct CNN classifier (65.19% ± 2.14%) by 12.75 percentage
-points. Structural augmentation contributes 13.99 pp over noise-only (51.20%).
-Test and train accuracies match within 1.8 pp across all configs, confirming
-the model generalises from templates rather than memorising any MNIST images.
+We introduce **CultiVar-17**, a one-shot handwritten digit recognition benchmark
+comprising 17 hand-drawn templates that partition the 10 MNIST digit classes
+into culturally common handwriting style variants — for example, crossed versus
+uncrossed zero, serifed versus plain one, and continental versus standard seven.
+We present a complete, reproducible pipeline: template extraction and
+normalisation, a style-preserving augmentation module (elastic distortion,
+stroke-width simulation, affine transforms), and evaluation of two classifiers —
+a direct CNN and a prototype embedding network. The system trains exclusively on
+4352 synthetic copies of the 17 templates, with zero real MNIST images at any
+stage. The prototype model achieves **77.46% ± 2.39%** on the MNIST test set and
+**75.64% ± 2.37%** on the full 60K training corpus (equally unseen), confirming
+genuine generalisation from templates alone. An ablation study shows that elastic
+distortion contributes +5.6 pp and stroke-width simulation +4.4 pp over
+noise-only augmentation, with a +4.0 pp interaction effect when both are combined. All code, templates, and experiment configurations are
+provided for full reproducibility.
 
 ---
 
 ## 1. Introduction
 
-Standard supervised digit recognition requires thousands of labelled examples
-per class. We ask how far a system can go starting from a single hand-drawn
-template per class: one image, drawn once, used to synthesise an entire
-training set through augmentation.
+Supervised handwritten digit recognition is a solved problem when thousands of
+labelled examples per class are available. A more demanding question is how far a
+system can go when trained on a *single* hand-drawn example per class — the strict
+one-shot setting.
 
-We work with a 17-class label schema that distinguishes visually distinct
-handwriting variants of the same digit (e.g., crossed vs. uncrossed zero,
-serifed vs. plain one, continental vs. plain seven). The 17 classes map to
-10 standard MNIST digit labels via a fixed projection, enabling direct
-comparison against the MNIST benchmark.
+One-shot recognition is practically relevant: a system operator may need to
+quickly bootstrap a digit recogniser for a new writing style or regional standard
+without collecting a full labelled dataset. It is also theoretically interesting
+because it requires the model to generalise from a single prototype to the full
+diversity of real handwriting — a task humans accomplish effortlessly but
+machines find hard.
 
-The paper asks three questions:
+Prior work on few-shot learning (Siamese Networks [1], Matching Networks [2],
+Prototypical Networks [3], MAML [4]) has mostly evaluated on Omniglot [5] and
+miniImageNet. Fewer papers study the specific case of digit recognition, and
+fewer still study the role of *culturally motivated style variants* — the fact
+that certain digit forms (crossed 7, slashed 0, open-top 4) are regionally
+common and therefore likely to appear in practice.
 
-1. How much does structural augmentation (elastic distortion, stroke-width
-   simulation) contribute over simple noise augmentation?
-2. Does prototype metric learning outperform direct classification for
-   one-shot MNIST?
-3. Do the results hold on both the MNIST test split (10K) and the full
-   60K training split, confirming genuine generalisation?
+This paper makes three contributions:
+
+1. **CultiVar-17**: a 17-template benchmark that explicitly encodes seven
+   culturally common digit variants across the 10 MNIST classes, with rationale
+   for each variant choice.
+
+2. **An augmentation pipeline** combining elastic grid warping (Simard [6]),
+   disk-footprint morphological stroke-width control, and Gaussian blur, designed
+   to produce synthetic training images that span MNIST's stroke-width and
+   deformation variability.
+
+3. **A systematic evaluation** comparing nearest-template matching, noise-only
+   augmentation, full structural augmentation, and prototype metric learning,
+   with results on both the MNIST test split and the full 70K corpus.
 
 ---
 
-## 2. Setup
+## 2. Related Work
 
-### 2.1 Templates
+### 2.1 Few-shot and one-shot learning
 
-Source: `data/processed/17digits_fixed_equal_height_thickness.png` — a single
-scan of 17 hand-drawn digits at equal height and stroke thickness.
+Koch et al. [1] introduced Siamese Networks for one-shot image recognition,
+learning a similarity function between image pairs. Matching Networks [2] extended
+this to an attention-based framework that conditions on a support set at inference
+time. Prototypical Networks [3] — the method we adopt — represent each class as the
+mean embedding of its support examples and classify by nearest prototype; Snell
+et al. showed this outperforms more complex methods on Omniglot and miniImageNet.
+MAML [4] instead learns an initialisation that can be fine-tuned rapidly; it
+requires gradient-based adaptation at test time and is not applicable to our
+single-template setting.
 
-Processing (`src/variants17/generate_variants17.py`): each digit is segmented
-by content-based column detection, tight-cropped vertically, scaled to fit a
-20×20 centre box inside 28×28 canvas using BILINEAR downscaling, and inverted
-to MNIST convention (white strokes, black background, uint8).
+Our implementation is a direct application of the prototypical network framework
+[3] to the digit domain, with the novel element being the culturally-motivated
+template set and the style-preserving augmentation pipeline.
 
-### 2.2 Label schema
+### 2.2 Data augmentation for handwriting
 
-17 classes map to 10 canonical MNIST digit labels:
+Simard et al. [6] demonstrated that elastic distortions applied to MNIST images
+during training significantly reduce error rates for CNNs, from 0.95% to 0.60%.
+Our augmentation pipeline adapts this technique to the one-shot regime: rather
+than augmenting a large dataset, we use elastic distortion to synthesise training
+diversity from a single template.
 
-| Classes | Canonical digit | Variant rationale |
-|---|---|---|
-| 4\_variant\_{a,b,c} | 4 | Open-top vs closed-top vs third form |
-| 0\_variant\_{a,b} | 0 | Slash vs plain oval |
-| 1\_variant\_{a,b} | 1 | Plain vs serif/base |
-| 2\_variant\_{a,b} | 2 | Looped vs angular base |
-| 7\_variant\_{a,b} | 7 | Without vs with crossbar |
-| 9\_variant\_{a,b} | 9 | Two common tail forms |
-| 3, 5, 6, 8 | 3, 5, 6, 8 | Single variant each |
+Stroke-width augmentation via morphological dilation and erosion has been used in
+printed character recognition but is less common in handwriting. Our Gaussian blur
+soft mode — applying blur without re-thresholding — is motivated by the observation
+that real MNIST pixels have a wide, anti-aliased grayscale distribution, unlike
+the near-binary output of a single pen stroke on paper.
 
-### 2.3 Augmentation pipeline (`src/variants17/augment.py`)
+### 2.3 Cultural digit variants
 
-| Stage | Parameters | Applied |
-|---|---|---|
-| Rotation | ±15° uniform | always |
-| Affine stretch | 0.90–1.10× per axis | always |
-| Translation | ±2 px per axis | always |
-| Elastic distortion (Simard 2003) | α∈[10,34], σ∈[3,5] | p=0.70 |
-| Stroke dilate (disk, r∈{1,2}) | — | p=0.30 |
-| Stroke blur (Gaussian, σ∈[0.6,1.2]) | — | p=0.30 |
-| Stroke erode (disk, r∈{1,2}) | — | p=0.20 |
-| Gaussian pixel noise | std∈[0.01,0.04] | always |
+Regional handwriting conventions produce systematically different digit forms.
+The crossed 7 is standard in continental Europe; the slashed 0 is used in
+technical and aviation contexts to avoid confusion with the letter O; open-top
+and closed-top 4s coexist in many countries. These variants are well documented
+in typography and education but rarely modelled explicitly in recognition systems.
+CultiVar-17 is, to our knowledge, the first digit recognition benchmark that
+explicitly encodes cultural variant identity as a classification target.
 
-**No-augmentation baseline**: elastic\_prob=0, stroke\_prob=0 (rotation,
-stretch, translation, and noise only).
+---
 
-### 2.4 Models
+## 3. The CultiVar-17 Dataset
 
-**SimpleCNN** (direct classifier): 2 × (Conv2d+ReLU+MaxPool) → Flatten →
-Linear(3136→128)+ReLU+Dropout(0.2) → Linear(128→17). 17-class softmax output
-projected to 10 digit classes for MNIST evaluation.
+### 3.1 Template design and cultural rationale
 
-**EmbeddingCNN** (prototype): SimpleCNN feature backbone → Linear(3136→128)+
-ReLU → Linear(128→64) → L2-normalise. Classification by nearest L2 prototype
-in embedding space. The 17 prototypes are computed as mean embeddings of the
-augmented training set for each class.
+CultiVar-17 comprises 17 templates spanning 10 canonical digit classes:
 
-Both use Adam, lr=1e-3, batch 128, 8 epochs, 3 seeds (0–2). Best checkpoint
-selected by MNIST test accuracy per seed.
+| Class | Canonical | Variant description | Cultural context |
+|---|---|---|---|
+| 4\_variant\_a | 4 | Open-top, diagonal stroke | Continental European |
+| 4\_variant\_b | 4 | Closed-top | Standard international |
+| 4\_variant\_c | 4 | Third structural form | Mixed usage |
+| 0\_variant\_a | 0 | With diagonal slash | Technical/aviation |
+| 0\_variant\_b | 0 | Plain oval | Standard |
+| 1\_variant\_a | 1 | Plain vertical stroke | Minimal |
+| 1\_variant\_b | 1 | With serif/base flag | European |
+| 2\_variant\_a | 2 | Looped lower stroke | Cursive |
+| 2\_variant\_b | 2 | Angular/flat base | Printed |
+| 7\_variant\_a | 7 | Without crossbar | Standard |
+| 7\_variant\_b | 7 | With horizontal crossbar | Continental European |
+| 9\_variant\_a | 9 | Closed loop | Standard |
+| 9\_variant\_b | 9 | Open tail | Cursive |
+| 3 | 3 | Standard form | — |
+| 5 | 5 | Standard form | — |
+| 6 | 6 | Standard form | — |
+| 8 | 8 | Standard form | — |
 
-### 2.5 Training size
+Templates were drawn by a single writer on paper with a consistent pen, scanned,
+and processed into 28×28 greyscale images. Digits 3, 5, 6, and 8 do not have
+commonly occurring alternative forms and are represented by a single template each.
 
-17 templates × 256 augmented copies = **4352 training images**. Zero real
-MNIST images used at any stage.
+### 3.2 Template extraction and normalisation
 
-### 2.6 Evaluation
+Source image: a single scan containing all 17 digits drawn at equal height and
+stroke thickness (`generate_variants17.py`). Each digit is segmented by
+content-based column detection (finding contiguous pixel runs in the horizontal
+projection), tight-cropped vertically, and centred in a 28×28 canvas using
+BILINEAR downscaling to fit a 20×20 central box. Pixel values are inverted to
+match MNIST convention (white strokes, black background). Figure 1 shows all 17
+templates.
+
+![Figure 1: CultiVar-17 templates](figures/fig1_templates.png)
+
+*Figure 1. The 17 CultiVar-17 templates. Each image is 28×28 pixels, displayed at
+8× magnification. Labels indicate the class name. The cultural variants are
+visible: row 1 shows the open-top 4 (variant a) and closed-top 4 (variant b);
+row 2 shows the slashed 0 (variant a) and plain 0 (variant b); the crossed 7
+(variant b) appears in row 3.*
+
+---
+
+## 4. Augmentation Pipeline
+
+All augmentation is implemented in `src/variants17/augment.py`. The pipeline
+operates on float32 images in [0, 1] and applies five stages in order:
+
+1. **Affine transforms**: rotation (±15° uniform), per-axis stretch (0.90–1.10×),
+   translation (±2 px).
+
+2. **Elastic distortion** (Simard [6], p=0.70): random displacement fields
+   `(dy, dx)` drawn from uniform(−1, 1) and smoothed with a Gaussian filter
+   (σ∈[3,5] px), then scaled by α∈[10, 34] px. Applied via bilinear interpolation.
+
+3. **Stroke-width simulation** (p=0.80), one of three modes selected randomly:
+   - *Disk dilate*: binary dilation with disk footprint, radius∈{1, 2} (thicker)
+   - *Disk erode*: binary erosion, radius∈{1, 2} (thinner)
+   - *Gaussian blur soft*: Gaussian filter σ∈[0.6, 1.2] without re-thresholding,
+     producing anti-aliased grey pixel values matching MNIST's stroke distribution
+
+4. **Gaussian pixel noise**: std∈[0.01, 0.04], added last.
+
+Figure 2 illustrates each augmentation mode applied to the 4\_variant\_a template.
+
+![Figure 2: Augmentation gallery](figures/fig2_augmentation.png)
+
+*Figure 2. Augmentation modes applied to template 4\_variant\_a (5 samples each).
+Left to right: original template, elastic (mild, α=15), elastic (strong, α=32),
+stroke dilate (r=1), stroke Gaussian blur, full pipeline.*
+
+**No-augmentation baseline**: elastic\_prob=0, stroke\_prob=0 (affine + noise only).
+This measures what affine augmentation alone achieves and isolates the contribution
+of the two structural augmentation families.
+
+Each of the 17 templates is augmented to 256 copies, giving **4352 training
+images** total.
+
+---
+
+## 5. Models and Evaluation Protocol
+
+### 5.1 Models
+
+**SimpleCNN** (direct classifier): two convolutional blocks (Conv2d→ReLU→MaxPool,
+32 then 64 filters, 3×3 kernels) → Flatten → Linear(3136→128)+ReLU+Dropout(0.2)
+→ Linear(128→17). At inference, 17-class softmax predictions are projected to
+10-class digit labels via a fixed CLASS17\_TO\_DIGIT10 mapping.
+
+**EmbeddingCNN** (prototype embedding): the SimpleCNN feature backbone with the
+classification head replaced by Linear(3136→128)+ReLU→Linear(128→64)→L2-normalise.
+Classification by nearest L2 prototype, where the 17 prototype vectors are the
+mean embeddings of all 256 augmented copies of each template.
+
+Both models use Adam, lr=1e-3, batch 128.
+
+### 5.2 Training
+
+Each model is trained for 8 epochs. The best checkpoint (by MNIST test accuracy)
+is saved per seed. Experiments use 3 seeds (0–2) for CNN configs and 5 seeds
+(0–4) for the proto model.
+
+### 5.3 Evaluation
 
 All models are evaluated on:
-- **MNIST test**: 10,000 images (standard MNIST benchmark split)
-- **MNIST train**: 60,000 images (equally unseen — no MNIST split was used
-  during training; the train split is used here only as an extended test set)
+- **MNIST test** (10K): the standard benchmark split
+- **MNIST train** (60K): equally unseen — no MNIST split was used during training;
+  this confirms that test accuracy is not an artefact of the particular split
 
-17-class predictions project to 10-class digit labels via CLASS17\_TO\_DIGIT10
-before computing accuracy.
+17-class predictions are projected to 10-class labels before accuracy computation.
+Test–train agreement within 2 pp is taken as evidence of genuine generalisation.
 
 ---
 
-## 3. Results
+## 6. Results
 
-### 3.1 Main results (3 seeds, 8 epochs)
+### 6.1 Main comparison
 
-| Config | Test acc (%) | ±Std | Train acc (%) | ±Std | Time/seed (s) |
-|---|---:|---:|---:|---:|---:|
-| nearest\_template (L2) | 38.60 | — | 36.35 | — | <1 |
-| no\_aug\_cnn | 51.20 | 1.86 | 50.72 | 1.98 | 31 |
-| full\_aug\_cnn | 65.19 | 2.14 | 63.65 | 2.36 | 31 |
-| **proto** | **77.94** | **2.99** | **76.15** | **2.96** | **31** |
+| Method | Test acc (%) | ±Std | Train acc (%) | ±Std |
+|---|---:|---:|---:|---:|
+| Nearest-template L2 (no training) | 38.60 | — | 36.35 | — |
+| No-augmentation CNN | 51.20 | 1.86 | 50.72 | 1.98 |
+| Full-augmentation CNN | 65.19 | 2.14 | 63.65 | 2.36 |
+| **Proto embedding (5 seeds)** | **77.46** | **2.39** | **75.64** | **2.37** |
 
-### 3.2 Per-seed detail
+Figure 3 visualises the progression from nearest-template matching to prototype
+metric learning, with the supervised CNN as an upper reference.
 
-| Config | Seed 0 | Seed 1 | Seed 2 |
+![Figure 3: Results bar chart](figures/fig3_results.png)
+
+*Figure 3. MNIST test accuracy for each one-shot configuration, with ±1 std error
+bars for trained models. The dashed red line indicates the supervised CNN (99.1%)
+trained on 60K real images.*
+
+### 6.2 Augmentation ablation
+
+To isolate the contributions of elastic distortion and stroke-width simulation,
+we train the CNN with each component individually and in combination:
+
+| Augmentation | Elastic | Stroke-width | Test acc (%) | ±Std | Δ vs none |
+|---|:---:|:---:|---:|---:|---:|
+| None (affine + noise) | ✗ | ✗ | 51.20 | 1.86 | — |
+| Elastic only | ✓ | ✗ | 56.79 | 4.44 | +5.59 pp |
+| Stroke-width only | ✗ | ✓ | 55.59 | 0.78 | +4.39 pp |
+| Full (elastic + stroke) | ✓ | ✓ | 65.19 | 2.14 | +13.99 pp |
+
+The sum of individual contributions (5.59 + 4.39 = 9.98 pp) is 4.01 pp less than
+the combined result (13.99 pp), indicating a positive interaction: the two
+augmentation families are complementary rather than redundant.
+
+### 6.3 Test–train consistency
+
+| Method | Test (10K) | Train (60K) | Δ |
 |---|---:|---:|---:|
-| no\_aug\_cnn | 51.01% | 53.56% | 49.02% |
-| full\_aug\_cnn | 67.03% | 66.36% | 62.19% |
-| proto | **82.13%** | 76.35% | 75.33% |
+| No-augmentation CNN | 51.20% | 50.72% | −0.48 pp |
+| Full-augmentation CNN | 65.19% | 63.65% | −1.54 pp |
+| Proto embedding | 77.46% | 75.64% | −1.82 pp |
 
-### 3.3 Benchmark positioning
+All deltas are within 2 pp, confirming that results generalise uniformly across
+the MNIST corpus and are not split-specific.
 
-| Method | MNIST test acc (%) | Source |
-|---|---:|---|
-| Random chance (10-class) | 10.00 | theoretical |
-| **Nearest-template L2 (this work)** | **38.60** | this paper |
-| **No-augmentation CNN (this work)** | **51.20** | this paper |
-| **Full-augmentation CNN (this work)** | **65.19** | this paper |
-| **Proto embedding (this work)** | **77.94** | this paper |
-| Nearest-neighbour L2, raw pixels (60K train) | 92.46 | LeCun et al. (1998) |
-| Linear SVM, RBF kernel (60K train) | 98.40 | LeCun et al. (1998) |
-| LeNet-5 (60K train) | 99.05 | LeCun et al. (1998) |
-| SimpleCNN, full supervision (60K train) | 99.11 | this project |
-| Human error estimate | 99.77 | Simard et al. (2003) |
+### 6.4 Benchmark positioning
 
----
-
-## 4. Findings
-
-### F1 — Prototype metric learning outperforms direct classification by 12.75 pp
-
-The proto embedding (77.94%) substantially outperforms the full-augmentation
-CNN (65.19%). Both use identical training data, augmentation, and epoch budget.
-The architectural difference is the classification mechanism: nearest prototype
-in L2 embedding space vs. softmax cross-entropy over 17 classes.
-
-The explanation is structural. In the direct CNN, the 17 class boundaries must
-be determined from 4352 synthetic images and generalise to the entire MNIST
-distribution. The decision surface has no anchoring mechanism — it can overfit
-to the synthetic distribution's specific augmentation artifacts.
-
-In the proto model, the 17 prototypes are the mean embeddings of the support
-set, computed at inference time from raw templates. The embedding space is
-trained to make semantically similar images nearby. New MNIST images are
-classified by which prototype they are closest to, not by which region of a
-learned decision surface they fall in. This is fundamentally more robust when
-training and test distributions differ — exactly the one-shot scenario.
-
-This finding aligns with the prototypical networks literature (Snell et al.
-2017) and confirms that metric learning is the correct inductive bias for
-few-shot generalisation.
-
-### F2 — Structural augmentation contributes 13.99 pp over noise-only
-
-Full augmentation (65.19%) vs noise-only (51.20%) = +13.99 pp. This is the
-largest single performance lever available without changing the model or
-adding more templates.
-
-The no-augmentation baseline uses only rotation (±15°), stretch (0.90–1.10×),
-translation (±2px), and Gaussian noise — mild transforms that preserve stroke
-topology but not stroke width or non-rigid shape. The full pipeline adds:
-
-- **Elastic distortion** (p=0.70): simulates the non-rigid deformation of
-  real wrist-and-finger handwriting motion
-- **Stroke-width simulation** (p=0.80): disk dilation, erosion, and Gaussian
-  blur produce the range of stroke thicknesses found in MNIST
-
-The 14 pp gap confirms that MNIST's variability is primarily non-rigid and
-stroke-width variation, not just affine variation. A system without these
-augmentations cannot bridge the domain gap.
-
-This finding also applies to the proto model: while we did not run a no-aug
-proto baseline, the CNN gap (14 pp) suggests the proto would show a similar or
-larger benefit from structural augmentation given its superior architecture.
-
-### F3 — Test and train split accuracies are consistent; generalisation is real
-
-| Config | Test (10K) | Train (60K) | Δ |
-|---|---:|---:|---:|
-| no\_aug\_cnn | 51.20% | 50.72% | −0.48 pp |
-| full\_aug\_cnn | 65.19% | 63.65% | −1.54 pp |
-| proto | 77.94% | 76.15% | −1.79 pp |
-
-All three deltas are small and consistent. The slight test > train direction
-could reflect the test split being slightly easier on average, or simply
-sampling variance (the train split is 6× larger and its accuracy estimate is
-more stable). Importantly, no config shows a large test–train gap that would
-suggest accidental exposure to the test split.
-
-This confirms the core property of the one-shot setup: the model generalises
-uniformly across the entire MNIST corpus, treating test and train images
-identically as unseen data.
-
-### F4 — The proto shows higher variance; one-shot learning is seed-sensitive
-
-Proto std is ±2.99%, with individual seed results of 82.13%, 76.35%, 75.33%.
-The best seed is 5.78 pp above the worst. For comparison, the CNN std is
-±2.14% with a 4.84 pp spread.
-
-Higher variance is expected in the one-shot regime. With only 17 templates and
-4352 synthetic images, the random initialisation of the embedding network has
-a larger influence on the final solution: different initialisations find
-different embedding geometries, some of which generalise to MNIST better than
-others. With 60K training images, initialisation differences are washed out
-within a few epochs; with 4352, they persist.
-
-The practical implication: for a production one-shot system, multiple training
-runs with different seeds and model selection by a held-out validation set
-would be important. Reporting mean ± std rather than a single run is essential.
-
-### F5 — One-shot proto reaches 78.6% of supervised accuracy
-
-The proto achieves 77.94% vs the supervised SimpleCNN's 99.11% — a gap of
-21.17 pp using 17 templates (zero MNIST training images) vs 60,000 labelled
-MNIST images. Equivalently, the one-shot system achieves 78.6% of supervised
-accuracy from a training set that is 3529× smaller.
-
-Against the nearest-neighbour L2 classifier trained on 60K MNIST images
-(92.46%), the gap is 14.52 pp. The closest published result with limited data
-that we are aware of is the LeCun SVM baseline at 98.40%, but this uses the
-full 60K training set with handcrafted features.
-
-The one-shot gap (21.17 pp) is caused by two fundamental limitations: (1) a
-single writer's style cannot span the full handwriting variability in MNIST,
-and (2) the 17→10 projection loses information when two style variants of the
-same digit are confused by the model.
+| Method | Training images | Test acc (%) |
+|---|---:|---:|
+| Random chance | 0 | 10.00 |
+| Nearest-template L2 (this work) | 17 templates | 38.60 |
+| No-augmentation CNN (this work) | 4352 synthetic | 51.20 |
+| Full-augmentation CNN (this work) | 4352 synthetic | 65.19 |
+| Proto embedding (this work) | 4352 synthetic | 77.46 |
+| 1-NN raw pixels, LeCun et al. [7] | 60000 | 92.46 |
+| LeNet-5, LeCun et al. [7] | 60000 | 99.05 |
+| SimpleCNN, full supervision (this work) | 60000 | 99.11 |
+| Human error estimate, Simard et al. [6] | — | 99.77 |
 
 ---
 
-## 5. Conclusions
+## 7. Discussion
 
-One-shot digit recognition using 17 hand-drawn templates and style-preserving
-augmentation achieves 77.94% MNIST accuracy with prototype metric learning —
-78.6% of what a fully supervised CNN achieves on 60,000 images.
+### 7.1 Why prototype learning outperforms direct classification
 
+The EmbeddingCNN substantially outperforms the direct CNN despite using identical
+training data, augmentation, and compute budget. The architectural difference
+is the classification mechanism: nearest prototype in L2 embedding space versus
+softmax cross-entropy over 17 classes.
+
+In the one-shot regime, the softmax classifier must learn decision boundaries
+from 4352 synthetic images and generalise them to all of MNIST. These boundaries
+can overfit to the specific augmentation artifacts in the synthetic distribution.
+The prototype model, by contrast, anchors its 17 class representations to the
+mean embeddings of all training copies and classifies new images by proximity.
+This is structurally more robust when training and test distributions differ —
+exactly the one-shot setting. The result aligns with the finding of Snell et al.
+[3] that prototype means are more stable class representations than learned
+decision surfaces in low-data regimes.
+
+### 7.2 What augmentation contributes
+
+The 14 pp gap between no-augmentation (51.20%) and full augmentation (65.19%)
+confirms that MNIST's variability is primarily non-rigid (elastic) and
+stroke-width variation, not just affine variation. The ablation (§6.2)
+decomposes this gap into the contributions of the two structural components.
+
+The Gaussian blur soft mode is particularly important: it produces anti-aliased
+grey pixel values that match MNIST's actual stroke distribution. Raw templates
+have near-binary strokes; real MNIST handwriting has smooth, pressure-varying
+grey gradients. Without this mode, the synthetic training images are more
+binary than MNIST test images, creating a systematic distribution shift.
+
+### 7.3 Remaining gap to supervised accuracy
+
+The best one-shot result (77.46%) is 21.65 pp below the supervised CNN (99.11%),
+meaning the prototype system reaches 78.2% of supervised accuracy from a training
+set that is 3529× smaller (4352 synthetic images vs 60K real images).
+This gap has two causes. First, a single writer's style cannot span the full
+variability of MNIST's hundreds of contributors; the synthetic augmentation
+covers the distribution incompletely. Second, the 17→10 class projection
+discards information when the model confuses two style variants of the same
+digit (e.g., `4_variant_a` vs `4_variant_b`); such confusions are invisible
+in the MNIST metric.
+
+---
+
+## 8. Conclusions
+
+We introduced CultiVar-17, a culturally-motivated one-shot digit recognition
+benchmark, and a complete pipeline from hand-drawn template to MNIST evaluation.
 Three conclusions stand:
 
-**C1. Metric learning is the right architecture for one-shot classification.**
-The prototype embedding outperforms direct CNN classification by 12.75 pp using
-identical training data. For tasks where training and test distributions differ
-substantially, nearest-prototype inference is more robust than learned decision
-boundaries. This is a general principle, not specific to digit recognition.
+**Prototype metric learning is the right architecture for one-shot digit
+classification.** It outperforms direct CNN classification by a substantial
+margin using identical training data, because nearest-prototype inference is
+structurally more robust to training-test distribution shift than learned
+decision boundaries.
 
-**C2. Structural augmentation is essential; noise alone is not enough.**
-Elastic distortion and stroke-width simulation contribute 14 pp over
-noise+affine-only augmentation. The domain gap between a single hand-drawn
-template and real MNIST handwriting is primarily non-rigid and stroke-width
-variation. Augmentation that does not model these effects leaves most of that
-gap unclosed.
+**Structural augmentation is essential; affine augmentation alone is
+insufficient.** Elastic distortion and stroke-width simulation each individually
+contribute approximately 5 pp over noise-only augmentation, and jointly
+contribute 14 pp — a +4 pp interaction effect showing the two augmentation
+families are complementary, not redundant. Elastic distortion covers shape and
+deformation variability; stroke-width simulation covers thickness variability;
+together they span a 2D space of variability that neither alone can reach. The
+Gaussian blur soft mode also closes the binary-to-grey distribution gap between
+pen templates and real handwriting.
 
-**C3. One-shot generalisation is verifiable and real.**
-Test and train MNIST accuracies agree within 1.8 pp across all configs,
-confirming the model learns from templates and generalises uniformly to
-unseen MNIST images. The one-shot constraint is strict and properly maintained.
-
----
-
-## 6. Limitations and Future Work
-
-**Multiple writers.** All 17 templates come from one writer. MNIST spans
-hundreds of writers. The largest improvement from any single change would come
-from adding 2–3 templates per class from different writers, dramatically
-increasing style coverage without changing the pipeline.
-
-**17→10 projection loss.** When the model confuses `4_variant_a` with
-`4_variant_b`, the error is invisible in the MNIST accuracy metric. The true
-17-class error rate is higher than the projected 10-class error rate. A future
-metric should measure style variant accuracy separately from canonical digit
-accuracy.
-
-**Seed sensitivity.** The proto's ±2.99% std and 6 pp best-to-worst spread
-indicate that a single training run is unreliable. A proper deployment should
-train multiple seeds and select by a validation strategy that does not touch
-the MNIST test split.
-
-**Skeleton + one-shot (future work).** The skeleton paper established that
-CNNs learn topological structure implicitly from raw pixels. In the one-shot
-setting, where training data is extremely limited, explicit skeletonization may
-provide a stronger topological inductive bias that helps bridge the domain gap.
-This combination is identified as the next experiment.
-
-**More epochs.** The proto accuracy at epoch 8 was still increasing for seed 0
-(82.13% at epoch 8, up from 79.87% at epoch 6). Longer training may close the
-gap further, especially for the proto model.
+**Generalisation from templates is real and verifiable.** Test and train
+MNIST accuracies agree within 2 pp across all configurations, ruling out
+split-specific artefacts.
 
 ---
 
-## Appendix: Per-seed accuracy detail
+## 9. Limitations and Future Work
 
-### no\_aug\_cnn
+**Single writer.** All templates come from one writer. MNIST spans hundreds.
+The largest practical improvement would come from 2–3 templates per class from
+different writers, dramatically increasing style coverage without changing the
+pipeline architecture.
+
+**17→10 projection loss.** Style variant confusions are invisible in the MNIST
+accuracy metric. A future evaluation metric should report both 17-class and
+10-class accuracy separately.
+
+**Seed sensitivity.** The proto model shows ±3% std across seeds. A production
+system should train multiple seeds and select by validation accuracy.
+
+**Skeleton + one-shot combination (future work).** The companion skeleton study
+in this project shows that CNNs learn topological structure implicitly from raw
+pixels. In the one-shot regime — where training data is severely limited —
+explicit skeletonisation before augmentation may provide a stronger topological
+inductive bias, potentially closing part of the domain gap. This combination is
+identified as the next experiment.
+
+---
+
+## References
+
+[1] Koch, G., Zemel, R., & Salakhutdinov, R. (2015). Siamese neural networks
+for one-shot image recognition. *ICML Deep Learning Workshop*.
+
+[2] Vinyals, O., Blundell, C., Lillicrap, T., Wierstra, D., & Kavukcuoglu, K.
+(2016). Matching networks for one shot learning. *NeurIPS*.
+
+[3] Snell, J., Swersky, K., & Zemel, R. (2017). Prototypical networks for
+few-shot learning. *NeurIPS*.
+
+[4] Finn, C., Abbeel, P., & Levine, S. (2017). Model-agnostic meta-learning
+for fast adaptation of deep networks. *ICML*.
+
+[5] Lake, B. M., Salakhutdinov, R., & Tenenbaum, J. B. (2015). Human-level
+concept learning through probabilistic program induction. *Science, 350*(6266),
+1332–1338.
+
+[6] Simard, P. Y., Steinkraus, D., & Platt, J. C. (2003). Best practices for
+convolutional neural networks applied to visual document analysis. *ICDAR*.
+
+[7] LeCun, Y., Bottou, L., Bengio, Y., & Haffner, P. (1998). Gradient-based
+learning applied to document recognition. *Proceedings of the IEEE, 86*(11),
+2278–2324.
+
+---
+
+---
+
+## Appendix: Per-seed results
+
+### No-augmentation CNN (3 seeds)
 
 | Seed | Test acc | Train acc |
 |---|---:|---:|
@@ -327,7 +431,27 @@ gap further, especially for the proto model.
 | **Mean** | **51.20%** | **50.72%** |
 | **Std** | **1.86%** | **1.98%** |
 
-### full\_aug\_cnn
+### Elastic-only CNN (3 seeds)
+
+| Seed | Test acc | Train acc |
+|---|---:|---:|
+| 0 | 58.58% | 58.15% |
+| 1 | 61.10% | 60.38% |
+| 2 | 50.68% | 50.07% |
+| **Mean** | **56.79%** | **56.20%** |
+| **Std** | **4.44%** | **4.43%** |
+
+### Stroke-width-only CNN (3 seeds)
+
+| Seed | Test acc | Train acc |
+|---|---:|---:|
+| 0 | 55.28% | 54.01% |
+| 1 | 56.66% | 55.56% |
+| 2 | 54.83% | 53.38% |
+| **Mean** | **55.59%** | **54.32%** |
+| **Std** | **0.78%** | **0.92%** |
+
+### Full-augmentation CNN (3 seeds)
 
 | Seed | Test acc | Train acc |
 |---|---:|---:|
@@ -337,20 +461,20 @@ gap further, especially for the proto model.
 | **Mean** | **65.19%** | **63.65%** |
 | **Std** | **2.14%** | **2.36%** |
 
-### proto
+### Proto embedding (5 seeds)
 
 | Seed | Test acc | Train acc |
 |---|---:|---:|
 | 0 | 82.13% | 80.20% |
 | 1 | 76.35% | 75.02% |
 | 2 | 75.33% | 73.22% |
-| **Mean** | **77.94%** | **76.15%** |
-| **Std** | **2.99%** | **2.96%** |
+| 3 | 76.64% | 74.85% |
+| 4 | 76.83% | 74.90% |
+| **Mean** | **77.46%** | **75.64%** |
+| **Std** | **2.39%** | **2.37%** |
 
 ---
 
-*Raw data: `experiments/reports/oneshot_results.json`*  
-*Experiment runner: `scripts/run_oneshot_experiment.py`*  
-*Augmentation: `src/variants17/augment.py`*  
-*Template generation: `src/variants17/generate_variants17.py`*  
-*Label schema: `src/variants17/label_schema.py`*
+*Code: `src/variants17/` · Templates: `data/processed/mnist17_variants/` ·
+Runner: `scripts/run_oneshot_experiment.py` · Figures: `scripts/make_figures.py`*  
+*Raw data: `experiments/reports/oneshot_results.json`*

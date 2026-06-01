@@ -372,7 +372,29 @@ def main(args):
         seeds, **shared,
     ))
 
-    # 3. Full-augmentation CNN
+    # 3. Ablation: elastic only
+    if args.ablation:
+        results.append(run_config(
+            "elastic_only_cnn",
+            lambda seed, **kw: train_cnn_one_seed(
+                seed=seed, elastic_prob=args.elastic_prob, stroke_prob=0.0,
+                out_dir=os.path.join(args.out_dir, "elastic_only_cnn"), **kw,
+            ),
+            seeds, **shared,
+        ))
+
+    # 4. Ablation: stroke only
+    if args.ablation:
+        results.append(run_config(
+            "stroke_only_cnn",
+            lambda seed, **kw: train_cnn_one_seed(
+                seed=seed, elastic_prob=0.0, stroke_prob=args.stroke_prob,
+                out_dir=os.path.join(args.out_dir, "stroke_only_cnn"), **kw,
+            ),
+            seeds, **shared,
+        ))
+
+    # 5. Full-augmentation CNN
     results.append(run_config(
         "full_aug_cnn",
         lambda seed, **kw: train_cnn_one_seed(
@@ -382,7 +404,8 @@ def main(args):
         seeds, **shared,
     ))
 
-    # 4. Proto embedding
+    # 6. Proto embedding (optionally more seeds)
+    proto_seeds = list(range(args.proto_seeds))
     results.append(run_config(
         "proto",
         lambda seed, **kw: train_proto_one_seed(
@@ -390,12 +413,24 @@ def main(args):
             elastic_prob=args.elastic_prob, stroke_prob=args.stroke_prob,
             out_dir=os.path.join(args.out_dir, "proto"), **kw,
         ),
-        seeds, **shared,
+        proto_seeds, **shared,
     ))
 
-    # Save
-    payload = {"nearest_template": nearest, "configs": results, "local_cnn_acc": local_cnn_acc}
+    # Save (merge with existing to preserve previous runs)
     json_path = os.path.join(args.report_dir, "oneshot_results.json")
+    if os.path.exists(json_path):
+        with open(json_path, encoding="utf-8") as f:
+            existing = json.load(f)
+        new_by_name = {r["name"]: r for r in results}
+        merged = [new_by_name.pop(e["name"], e) for e in existing.get("configs", [])]
+        merged.extend(new_by_name.values())
+        payload = {
+            "nearest_template": nearest,
+            "configs": merged,
+            "local_cnn_acc": local_cnn_acc or existing.get("local_cnn_acc"),
+        }
+    else:
+        payload = {"nearest_template": nearest, "configs": results, "local_cnn_acc": local_cnn_acc}
     with open(json_path, "w", encoding="utf-8") as f:
         json.dump(payload, f, indent=2)
     print(f"[oneshot] results saved: {json_path}")
@@ -426,7 +461,11 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--seeds", type=int, default=3)
+    parser.add_argument("--proto-seeds", type=int, default=5,
+                        help="Number of seeds for the proto config (default 5 for paper)")
     parser.add_argument("--emb-dim", type=int, default=64)
     parser.add_argument("--elastic-prob", type=float, default=0.70)
     parser.add_argument("--stroke-prob", type=float, default=0.80)
+    parser.add_argument("--ablation", action="store_true",
+                        help="Also run elastic-only and stroke-only ablation configs")
     main(parser.parse_args())
