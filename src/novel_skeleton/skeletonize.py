@@ -1,6 +1,8 @@
 import numpy as np
 from skimage.morphology import medial_axis, skeletonize, thin
 
+METHODS = ("zhang", "lee", "thin", "medial_axis")
+
 
 def zhang_suen_skeletonize_uint8(img_2d: np.ndarray) -> np.ndarray:
     """Apply Zhang-Suen-style thinning via scikit-image skeletonize.
@@ -9,7 +11,7 @@ def zhang_suen_skeletonize_uint8(img_2d: np.ndarray) -> np.ndarray:
     """
     binary = img_2d > 30
     skel = skeletonize(binary)
-    return (skel.astype(np.uint8) * 255)
+    return skel.astype(np.uint8) * 255
 
 
 def skeletonize_uint8(img_2d: np.ndarray, method: str = "zhang") -> np.ndarray:
@@ -31,11 +33,30 @@ def skeletonize_uint8(img_2d: np.ndarray, method: str = "zhang") -> np.ndarray:
     elif method == "thin":
         skel = thin(binary)
     elif method == "medial_axis":
-        skel = medial_axis(binary)
+        skel = medial_axis(binary, return_distance=False)
     else:
         raise ValueError(
             f"Unsupported skeletonization method: {method}. "
             "Choose from: zhang, lee, thin, medial_axis"
         )
 
-    return (skel.astype(np.uint8) * 255)
+    return skel.astype(np.uint8) * 255
+
+
+def skeletonize_batch(
+    images: np.ndarray,
+    method: str = "zhang",
+    progress_every: int = 500,
+    split_name: str = "set",
+) -> np.ndarray:
+    """Skeletonize a batch of uint8 images, printing progress."""
+    out = []
+    total = len(images)
+    for idx, img in enumerate(images, start=1):
+        out.append(skeletonize_uint8(img, method=method))
+        if progress_every > 0 and (idx % progress_every == 0 or idx == total):
+            print(
+                f"[skeleton] progress split={split_name} method={method} {idx}/{total}",
+                flush=True,
+            )
+    return np.stack(out, axis=0)

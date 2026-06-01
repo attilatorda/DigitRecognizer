@@ -4,31 +4,19 @@ import sys
 
 import numpy as np
 import torch
+from skimage.transform import probabilistic_hough_line
 from torch import nn
 from torch.utils.data import DataLoader, TensorDataset
-from skimage.transform import probabilistic_hough_line
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 if ROOT not in sys.path:
     sys.path.insert(0, ROOT)
 
 from src.common.data_io import load_mnist_idx
-from src.common.utils import set_seed, ensure_dir
+from src.common.utils import ensure_dir, set_seed
 from src.local_cnn.model import SimpleCNN
-from src.novel_skeleton.skeletonize import skeletonize_uint8
-
-
-def skeletonize_batch(images, method: str = "zhang", progress_every: int = 500, split_name: str = "set"):
-    out = []
-    total = len(images)
-    for idx, img in enumerate(images, start=1):
-        out.append(skeletonize_uint8(img, method=method))
-        if progress_every > 0 and (idx % progress_every == 0 or idx == total):
-            print(
-                f"[skeleton_cnn] skeletonize_progress split={split_name} method={method} {idx}/{total}",
-                flush=True,
-            )
-    return np.stack(out, axis=0)
+from src.novel_skeleton.skeleton_cache import load_or_build
+from src.novel_skeleton.skeletonize import skeletonize_batch  # noqa: F401 — re-exported for callers
 
 
 def hough_line_map_uint8(
@@ -37,7 +25,7 @@ def hough_line_map_uint8(
     line_length: int = 5,
     line_gap: int = 2,
 ) -> np.ndarray:
-    """Generate a uint8 line map from a skeletonized MNIST image using probabilistic Hough."""
+    """Generate a uint8 line map from a skeletonized image using probabilistic Hough."""
     binary = skeleton_img_2d > 0
     lines = probabilistic_hough_line(
         binary,
@@ -45,7 +33,6 @@ def hough_line_map_uint8(
         line_length=line_length,
         line_gap=line_gap,
     )
-
     line_map = np.zeros_like(skeleton_img_2d, dtype=np.uint8)
     for (x0, y0), (x1, y1) in lines:
         num = max(abs(x1 - x0), abs(y1 - y0)) + 1
@@ -55,18 +42,20 @@ def hough_line_map_uint8(
     return line_map
 
 
-def build_input_tensor(images, channel_mode, hough_threshold, hough_line_length, hough_line_gap):
+def build_input_tensor(
+    images: np.ndarray,
+    channel_mode: str,
+    hough_threshold: int,
+    hough_line_length: int,
+    hough_line_gap: int,
+) -> torch.Tensor:
     if channel_mode == "skeleton":
         x_np = images[:, None, :, :].astype(np.float32) / 255.0
     elif channel_mode == "skeleton_hough":
         hough_maps = np.stack(
             [
-                hough_line_map_uint8(
-                    img,
-                    threshold=hough_threshold,
-                    line_length=hough_line_length,
-                    line_gap=hough_line_gap,
-                )
+                hough_line_map_uint8(img, threshold=hough_threshold,
+                                     line_length=hough_line_length, line_gap=hough_line_gap)
                 for img in images
             ],
             axis=0,
@@ -74,32 +63,26 @@ def build_input_tensor(images, channel_mode, hough_threshold, hough_line_length,
         x_np = np.stack([images, hough_maps], axis=1).astype(np.float32) / 255.0
     else:
         raise ValueError(f"Unsupported channel_mode: {channel_mode}")
-
     return torch.tensor(x_np, dtype=torch.float32)
 
 
 def to_loader(
-    images,
-    labels,
-    batch_size=128,
-    shuffle=False,
-    channel_mode="skeleton",
-    hough_threshold=8,
-    hough_line_length=5,
-    hough_line_gap=2,
-):
-    x = build_input_tensor(
-        images,
-        channel_mode=channel_mode,
-        hough_threshold=hough_threshold,
-        hough_line_length=hough_line_length,
-        hough_line_gap=hough_line_gap,
-    )
+    images: np.ndarray,
+    labels: np.ndarray,
+    batch_size: int = 128,
+    shuffle: bool = False,
+    channel_mode: str = "skeleton",
+    hough_threshold: int = 8,
+    hough_line_length: int = 5,
+    hough_line_gap: int = 2,
+) -> DataLoader:
+    x = build_input_tensor(images, channel_mode, hough_threshold, hough_line_length, hough_line_gap)
     y = torch.tensor(labels, dtype=torch.long)
     return DataLoader(TensorDataset(x, y), batch_size=batch_size, shuffle=shuffle)
 
 
-def evaluate(model, loader, device):
+def evaluate(model: nn.Module, loader: DataLoader, device: torch.device) -> float:
+    """Return overall accuracy."""
     model.eval()
     correct = total = 0
     with torch.no_grad():
@@ -111,6 +94,32 @@ def evaluate(model, loader, device):
     return correct / max(1, total)
 
 
+def evaluate_detailed(
+    model: nn.Module,
+    loader: DataLoader,
+    device: torch.device,
+    num_classes: int = 10,
+) -> tuple[float, dict[int, float]]:
+    """Return (overall_accuracy, {class_id: per_class_accuracy})."""
+    model.eval()
+    all_pred: list[np.ndarray] = []
+    all_true: list[np.ndarray] = []
+    with torch.no_grad():
+        for x, y in loader:
+            x, y = x.to(device), y.to(device)
+            pred = model(x).argmax(dim=1)
+            all_pred.append(pred.cpu().numpy())
+            all_true.append(y.cpu().numpy())
+    preds = np.concatenate(all_pred)
+    trues = np.concatenate(all_true)
+    overall = float((preds == trues).mean())
+    per_class = {}
+    for c in range(num_classes):
+        mask = trues == c
+        per_class[c] = float((preds[mask] == c).mean()) if mask.sum() > 0 else 0.0
+    return overall, per_class
+
+
 def main(args):
     set_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -118,40 +127,24 @@ def main(args):
     train_images, train_labels = load_mnist_idx(args.mnist_path, "train")
     test_images, test_labels = load_mnist_idx(args.mnist_path, "t10k")
 
-    print(
-        f"[skeleton_cnn] skeletonize_start method={args.skeleton_method} "
-        f"train={len(train_images)} test={len(test_images)}",
-        flush=True,
+    train_skel, _ = load_or_build(
+        train_images, args.skeleton_method, "train",
+        args.cache_dir, args.skeletonize_progress_every,
     )
-    train_images = skeletonize_batch(
-        train_images,
-        method=args.skeleton_method,
-        progress_every=args.skeletonize_progress_every,
-        split_name="train",
+    test_skel, _ = load_or_build(
+        test_images, args.skeleton_method, "test",
+        args.cache_dir, args.skeletonize_progress_every,
     )
-    test_images = skeletonize_batch(
-        test_images,
-        method=args.skeleton_method,
-        progress_every=args.skeletonize_progress_every,
-        split_name="test",
-    )
-    print("[skeleton_cnn] skeletonize_done", flush=True)
 
     train_loader = to_loader(
-        train_images,
-        train_labels,
-        args.batch_size,
-        shuffle=True,
+        train_skel, train_labels, args.batch_size, shuffle=True,
         channel_mode=args.channel_mode,
         hough_threshold=args.hough_threshold,
         hough_line_length=args.hough_line_length,
         hough_line_gap=args.hough_line_gap,
     )
     test_loader = to_loader(
-        test_images,
-        test_labels,
-        args.batch_size,
-        shuffle=False,
+        test_skel, test_labels, args.batch_size, shuffle=False,
         channel_mode=args.channel_mode,
         hough_threshold=args.hough_threshold,
         hough_line_length=args.hough_line_length,
@@ -182,12 +175,16 @@ def main(args):
             best_acc = acc
             torch.save(model.state_dict(), best_path)
 
+    _, per_class = evaluate_detailed(model, test_loader, device)
+    per_class_str = "  ".join(f"{c}:{v*100:.1f}%" for c, v in sorted(per_class.items()))
     print(f"[skeleton_cnn] best_test_acc={best_acc:.4f} saved={best_path}")
+    print(f"[skeleton_cnn] per_class_acc  {per_class_str}")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--mnist-path", default="mnist_data")
+    parser.add_argument("--cache-dir", default="data/processed/mnist_skeleton")
     parser.add_argument("--out-dir", default="experiments/checkpoints/skeleton")
     parser.add_argument("--epochs", type=int, default=5)
     parser.add_argument("--batch-size", type=int, default=128)
@@ -197,7 +194,6 @@ if __name__ == "__main__":
         "--channel-mode",
         choices=["skeleton", "skeleton_hough"],
         default="skeleton",
-        help="Input channels for model: skeleton only, or skeleton + Hough line map.",
     )
     parser.add_argument("--hough-threshold", type=int, default=8)
     parser.add_argument("--hough-line-length", type=int, default=5)
@@ -206,12 +202,6 @@ if __name__ == "__main__":
         "--skeleton-method",
         choices=["zhang", "lee", "thin", "medial_axis"],
         default="zhang",
-        help="Skeletonization algorithm to apply before training.",
     )
-    parser.add_argument(
-        "--skeletonize-progress-every",
-        type=int,
-        default=500,
-        help="Print preprocessing progress every N images (set 0 to disable).",
-    )
+    parser.add_argument("--skeletonize-progress-every", type=int, default=500)
     main(parser.parse_args())
