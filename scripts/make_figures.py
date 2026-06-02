@@ -225,6 +225,64 @@ def make_fig3(results_path: str, out_path: str = ""):
 
 
 # ---------------------------------------------------------------------------
+# Figure 4 — Confusion matrix heatmap
+# ---------------------------------------------------------------------------
+
+def make_fig4(analysis_path: str, out_path: str = ""):
+    with open(analysis_path, encoding="utf-8") as f:
+        data = json.load(f)
+
+    cm = np.array(data["confusion_matrix"])
+    per_digit_acc = {int(k): v for k, v in data["per_digit_accuracy"].items()}
+    overall = data["overall_accuracy"]
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5),
+                             gridspec_kw={"width_ratios": [3, 1]})
+
+    # Left: heatmap
+    ax = axes[0]
+    im = ax.imshow(cm, interpolation="nearest", cmap="Blues")
+    plt.colorbar(im, ax=ax, fraction=0.046, pad=0.04)
+    ax.set_xticks(range(10))
+    ax.set_yticks(range(10))
+    ax.set_xticklabels(range(10))
+    ax.set_yticklabels(range(10))
+    ax.set_xlabel("Predicted digit", fontsize=11)
+    ax.set_ylabel("True digit", fontsize=11)
+    ax.set_title(f"Confusion matrix — proto best seed  ({overall*100:.1f}% overall)",
+                 fontsize=12)
+
+    thresh = cm.max() / 2.0
+    for i in range(10):
+        for j in range(10):
+            ax.text(j, i, str(cm[i, j]), ha="center", va="center", fontsize=8,
+                    color="white" if cm[i, j] > thresh else "black")
+
+    # Right: per-digit accuracy, sorted worst → best
+    ax2 = axes[1]
+    digits_sorted = sorted(per_digit_acc, key=per_digit_acc.get)
+    vals = [per_digit_acc[d] * 100 for d in digits_sorted]
+    colors = ["#c0392b" if v < 70 else "#e67e22" if v < 85 else "#27ae60" for v in vals]
+    bars = ax2.barh(range(10), vals, color=colors)
+    ax2.set_yticks(range(10))
+    ax2.set_yticklabels([f"Digit {d}" for d in digits_sorted])
+    ax2.set_xlabel("Accuracy (%)", fontsize=10)
+    ax2.set_title("Per-digit accuracy", fontsize=12)
+    ax2.set_xlim(0, 108)
+    ax2.axvline(overall * 100, color="navy", linewidth=1.2, linestyle="--", alpha=0.6)
+    for bar, val in zip(bars, vals):
+        ax2.text(val + 1, bar.get_y() + bar.get_height() / 2,
+                 f"{val:.1f}%", va="center", fontsize=8)
+    for spine in ["top", "right"]:
+        ax2.spines[spine].set_visible(False)
+
+    plt.tight_layout()
+    plt.savefig(out_path, dpi=180, bbox_inches="tight", facecolor="white")
+    plt.close()
+    print(f"[figures] saved {out_path}")
+
+
+# ---------------------------------------------------------------------------
 # Main
 # ---------------------------------------------------------------------------
 
@@ -247,6 +305,16 @@ def main():
         results_path=os.path.join(ROOT, "experiments", "reports", "oneshot_results.json"),
         out_path=os.path.join(OUT_DIR, "fig3_results.png"),
     )
+
+    analysis_path = os.path.join(ROOT, "experiments", "reports",
+                                 "misclassification_analysis.json")
+    if os.path.exists(analysis_path):
+        make_fig4(
+            analysis_path=analysis_path,
+            out_path=os.path.join(OUT_DIR, "fig4_confusion.png"),
+        )
+    else:
+        print("[figures] skipping fig4 — run analyze_misclassifications.py first")
 
 
 if __name__ == "__main__":

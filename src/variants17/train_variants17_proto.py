@@ -80,6 +80,24 @@ def eval_mnist_proj(model, images_u8, labels10, prototypes, device, batch_size=5
     return correct / max(1, total)
 
 
+def get_mnist_predictions(model, images_u8, prototypes, device, batch_size=512):
+    """Return (pred10, pred17) arrays for all MNIST images (for confusion matrix analysis)."""
+    pred10_all, pred17_all = [], []
+    loader = DataLoader(
+        TensorDataset(torch.tensor(images_u8, dtype=torch.float32).unsqueeze(1) / 255.0),
+        batch_size=batch_size, shuffle=False,
+    )
+    model.eval()
+    with torch.no_grad():
+        for (x,) in loader:
+            z = model(x.to(device))
+            p17 = torch.cdist(z, prototypes).argmin(dim=1).cpu().numpy()
+            p10 = np.array([CLASS17_TO_DIGIT10[int(c)] for c in p17])
+            pred17_all.append(p17)
+            pred10_all.append(p10)
+    return np.concatenate(pred10_all), np.concatenate(pred17_all)
+
+
 def main(args):
     set_seed(args.seed)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
