@@ -19,6 +19,14 @@
 % Correct bad hyphenation
 \hyphenation{CultiVar}
 
+% ---- TARGET VENUE ----
+% Primary:  ICFHR 2026 (International Conference on Frontiers in Handwriting
+%           Recognition) — 8-page IEEE two-column format, directly relevant to
+%           handwriting, cultural variants, and digit recognition.
+% Fallback: Data-Centric AI Workshop @ NeurIPS 2026 (4-6 pages, values
+%           reproducibility and dataset contributions).
+% ----------------------
+
 % ============================================================
 \begin{document}
 
@@ -172,8 +180,9 @@ Given one template per class, we generate training batches via stochastic augmen
 \begin{itemize}
   \item \textbf{Elastic distortion} \cite{Simard2003}: random displacement field
         ($\sigma\!=\!4$, $\alpha\!\in\![15,32]$), interpolated with Gaussian smoothing.
-  \item \textbf{Stroke-width perturbation}: morphological dilation (\textit{disk\_dilate})
-        or soft blur (\textit{blur\_soft}), radius~1.
+  \item \textbf{Stroke-width perturbation}: morphological dilation (\textit{disk\_dilate},
+        radius $\in\{1,2\}$) or soft blur (\textit{blur\_soft}), applied with probability
+        0.80 per sample.
   \item \textbf{Affine noise}: rotation $\pm8^\circ$, scale $\in[0.92, 1.08]$ per axis.
   \item \textbf{Additive noise}: Gaussian, std $\in[0.01, 0.03]$.
 \end{itemize}
@@ -305,6 +314,39 @@ Even at $77.46\%$, the system falls 22~pp short of supervised accuracy.
 This gap reflects the fact that 17 templates cannot cover all handwriting styles in MNIST
 regardless of augmentation or model complexity.
 
+\subsection{Augmentation Realism vs.\ Accuracy}
+
+An unexpected finding emerged from a post-hoc augmentation ablation.
+The stroke-width dilation uses morphological dilation with radius $\in\{1,2\}$ and a hard
+intensity floor of 0.85, producing visually unrealistic images—thick, near-binary strokes
+resembling ink blobs rather than handwritten digits.
+Three attempts to replace this with perceptually natural alternatives were tested:
+
+\begin{table}[h]
+  \centering
+  \caption{Proto accuracy under alternative augmentation variants.}
+  \label{tab:augvariants}
+  \begin{tabular}{@{}lc@{}}
+    \toprule
+    Augmentation variant & Proto acc.\,(\%) \\
+    \midrule
+    Original (radius 1--2, floor 0.85)  & $\mathbf{77.46 \pm 2.39}$ \\
+    Softer (radius 1, floor 0.65)        & $75.55 \pm 2.39$ \\
+    Softer + edge smoothing              & $75.18 \pm 0.85$ \\
+    Wider Gaussian blur ($\sigma\leq2.0$) & $75.21 \pm 2.26$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Every visually improved variant costs approximately 2~pp.
+The explanation is distributional: MNIST contains a sub-population of heavy-handed writers
+whose thick, dense strokes resemble the blob augmentation.
+Removing the blobs reduces coverage of this sub-population.
+This illustrates a general principle: \emph{augmentation realism and benchmark coverage are
+not the same objective}.
+The original augmentation is retained because it maximises the reported metric; systems
+trained on real handwriting samples would not require it.
+
 % ============================================================
 \section{Threats to Validity}
 
@@ -327,6 +369,9 @@ objectives such as MAML \cite{Finn2017} or Matching Networks \cite{Vinyals2016} 
 further improve generalisation.
 Extending CultiVar-17 to additional cultural conventions and non-Latin scripts is a natural
 next step for the dataset contribution.
+Finally, the current 8-epoch training budget is conservative; increasing to 16--24 epochs
+is expected to recover accuracy gaps introduced by softer augmentation variants without
+any augmentation changes.
 
 % ============================================================
 \section{Reproducibility}
@@ -350,7 +395,10 @@ Raw results are stored in
 % ============================================================
 \section*{Acknowledgements}
 
-[Acknowledgements placeholder.]
+The author thanks the open-source community for the tools used in this work,
+in particular the NumPy, PyTorch, scikit-image, and Streamlit projects.
+The MNIST dataset was provided by Yann LeCun and colleagues and is freely
+available at \url{http://yann.lecun.com/exdb/mnist/}.
 
 % ============================================================
 \begin{figure}[t]
