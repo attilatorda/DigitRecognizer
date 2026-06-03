@@ -63,6 +63,7 @@ def initialize_session_state():
     defaults = {
         "session": None,
         "current_image_idx": 0,
+        "image_index": 0,
         "images": None,
         "labels": None,
         "dataset_source": None,
@@ -235,39 +236,39 @@ else:
     with tab1:
         N = len(st.session_state.images)
 
-        # Navigation controls — bottom-aligned so buttons sit level with the input
+        # Navigation controls — bottom-aligned so buttons sit level with the input.
+        # Buttons are rendered (and their click state read) BEFORE the number_input
+        # so that session state can be updated before the keyed widget is instantiated.
         col1, col2, col3, col4, col5 = st.columns(5, vertical_alignment="bottom")
 
         with col1:
-            if st.button("< Previous", use_container_width=True):
-                new = max(0, st.session_state.current_image_idx - 1)
-                st.session_state.current_image_idx = new
-                st.session_state["image_index"] = new
+            prev_clicked = st.button("< Previous", use_container_width=True)
+        with col3:
+            next_clicked = st.button("Next >", use_container_width=True)
+        with col5:
+            rand_clicked = st.button("Random", use_container_width=True)
+
+        # Apply navigation before the number_input is instantiated
+        if prev_clicked:
+            st.session_state["image_index"] = max(0, st.session_state["image_index"] - 1)
+        elif next_clicked:
+            st.session_state["image_index"] = min(N - 1, st.session_state["image_index"] + 1)
+        elif rand_clicked:
+            st.session_state["image_index"] = int(np.random.randint(0, N))
 
         with col2:
+            # No value= parameter — widget state is owned entirely by the key
             new_idx = st.number_input(
                 "Go to image:",
                 min_value=0,
                 max_value=N - 1,
-                value=st.session_state.current_image_idx,
                 key="image_index",
             )
-            st.session_state.current_image_idx = int(new_idx)
 
-        with col3:
-            if st.button("Next >", use_container_width=True):
-                new = min(N - 1, st.session_state.current_image_idx + 1)
-                st.session_state.current_image_idx = new
-                st.session_state["image_index"] = new
+        st.session_state.current_image_idx = int(st.session_state["image_index"])
 
         with col4:
             st.metric("Position", f"{st.session_state.current_image_idx + 1} / {N}")
-
-        with col5:
-            if st.button("Random", use_container_width=True):
-                new = int(np.random.randint(0, N))
-                st.session_state.current_image_idx = new
-                st.session_state["image_index"] = new
 
         # Display current image
         current_idx = st.session_state.current_image_idx
