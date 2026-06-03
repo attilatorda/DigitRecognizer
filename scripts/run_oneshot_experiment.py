@@ -501,7 +501,7 @@ if __name__ == "__main__":
                         help="Number of seeds for the proto config (default 5 for paper)")
     parser.add_argument("--emb-dim", type=int, default=64)
     parser.add_argument("--elastic-prob", type=float, default=0.70)
-    parser.add_argument("--stroke-prob", type=float, default=1.00)
+    parser.add_argument("--stroke-prob", type=float, default=0.80)
     parser.add_argument("--ablation", action="store_true",
                         help="Also run elastic-only and stroke-only ablation configs")
     main(parser.parse_args())

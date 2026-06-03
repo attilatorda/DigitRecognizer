@@ -48,9 +48,6 @@ def stroke_width_adjust(
         out = img01.copy()
         out = np.where(fg_new, np.maximum(out, 0.65), out)
         out = np.where(~fg_new, np.minimum(out, 0.15), out)
-        # Smooth edges so thick strokes fade naturally instead of hard-cutting
-        from scipy.ndimage import gaussian_filter as gf
-        out = gf(out.astype(np.float64), sigma=0.5).astype(np.float32)
         return np.clip(out, 0.0, 1.0).astype(np.float32)
 
     return img01  # 'none'
@@ -64,7 +61,7 @@ def sample_augmentation_params(
     do_elastic = rng.random() < elastic_prob
     do_stroke = rng.random() < stroke_prob
     stroke_mode = (
-        str(rng.choice(["disk_dilate", "disk_erode", "blur_soft"], p=[0.375, 0.25, 0.375]))
+        str(rng.choice(["disk_dilate", "disk_erode", "blur_soft"], p=[0.30, 0.15, 0.55]))
         if do_stroke
         else "none"
     )
@@ -79,7 +76,7 @@ def sample_augmentation_params(
         "elastic_sigma": float(rng.uniform(3.0, 5.0)),
         "stroke_mode": stroke_mode,
         "stroke_radius": 1,
-        "stroke_blur_sigma": float(rng.uniform(0.6, 1.2)),
+        "stroke_blur_sigma": float(rng.uniform(0.6, 2.0)),
         "noise_std": float(rng.uniform(0.01, 0.04)),
     }
 
