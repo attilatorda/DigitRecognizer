@@ -48,6 +48,9 @@ def stroke_width_adjust(
         out = img01.copy()
         out = np.where(fg_new, np.maximum(out, 0.65), out)
         out = np.where(~fg_new, np.minimum(out, 0.15), out)
+        # Smooth edges so thick strokes fade naturally instead of hard-cutting
+        from scipy.ndimage import gaussian_filter as gf
+        out = gf(out.astype(np.float64), sigma=0.5).astype(np.float32)
         return np.clip(out, 0.0, 1.0).astype(np.float32)
 
     return img01  # 'none'
