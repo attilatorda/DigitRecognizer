@@ -140,9 +140,9 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data-dir", default="data/processed/mnist17_variants")
-    parser.add_argument("--mnist-path", default="mnist_data")
-    parser.add_argument("--out-dir", default="experiments/reports")
+    parser.add_argument("--data-dir", default=os.path.join(ROOT, "data/processed/mnist17_variants"))
+    parser.add_argument("--mnist-path", default=os.path.join(ROOT, "mnist_data"))
+    parser.add_argument("--out-dir", default=os.path.join(ROOT, "experiments/reports"))
     parser.add_argument("--template-idx", type=int, default=0)
     parser.add_argument("--n-per-mode", type=int, default=8)
     parser.add_argument("--elastic-prob", type=float, default=0.70)

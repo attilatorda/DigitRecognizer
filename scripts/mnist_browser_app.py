@@ -7,7 +7,6 @@ import json
 from typing import Optional, Tuple
 import sys
 
-# Add project root to path
 project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
 
@@ -21,14 +20,13 @@ from src.browser.data_models import TaggedDataset
 # ============================================================================
 
 st.set_page_config(
-    page_title="MNIST Browser & Tagger",
-    page_icon="🔢",
+    page_title="MNIST Browser",
     layout="wide",
-    initial_sidebar_state="expanded"
+    initial_sidebar_state="expanded",
 )
 
-st.title("🔢 MNIST Browser & Tagger")
-st.markdown("Browse MNIST datasets, add custom tags, detect duplicates, and export tagged datasets.")
+st.title("MNIST Browser")
+st.markdown("Browse datasets, add custom tags, detect duplicates, and export tagged datasets.")
 
 
 # ============================================================================
@@ -53,28 +51,31 @@ def load_dataset(dataset_type: str, dataset_path: str) -> Tuple[np.ndarray, Opti
             raise ValueError(f"Could not load dataset: {str(e)} / {str(e2)}")
 
 
+def _detect_cultivar17(labels: Optional[np.ndarray]) -> bool:
+    """Return True if labels look like CultiVar-17 class indices (0-16, exactly 17 unique)."""
+    if labels is None:
+        return False
+    unique = np.unique(labels)
+    return len(unique) == 17 and int(unique.max()) == 16
+
+
 def initialize_session_state():
-    """Initialize Streamlit session state variables."""
-    if "session" not in st.session_state:
-        st.session_state.session = None
-    if "current_image_idx" not in st.session_state:
-        st.session_state.current_image_idx = 0
-    if "images" not in st.session_state:
-        st.session_state.images = None
-    if "labels" not in st.session_state:
-        st.session_state.labels = None
-    if "dataset_source" not in st.session_state:
-        st.session_state.dataset_source = None
-    if "dataset_name" not in st.session_state:
-        st.session_state.dataset_name = None
-    if "existing_dataset" not in st.session_state:
-        st.session_state.existing_dataset = None
-    if "temp_tags" not in st.session_state:
-        st.session_state.temp_tags = {}
-    if "gallery_page" not in st.session_state:
-        st.session_state.gallery_page = 0
-    if "gallery_page_size" not in st.session_state:
-        st.session_state.gallery_page_size = 20
+    defaults = {
+        "session": None,
+        "current_image_idx": 0,
+        "images": None,
+        "labels": None,
+        "dataset_source": None,
+        "dataset_name": None,
+        "existing_dataset": None,
+        "temp_tags": {},
+        "gallery_page": 0,
+        "gallery_page_size": 20,
+        "is_cultivar17": False,
+    }
+    for key, val in defaults.items():
+        if key not in st.session_state:
+            st.session_state[key] = val
 
 
 initialize_session_state()
@@ -85,12 +86,12 @@ initialize_session_state()
 # ============================================================================
 
 with st.sidebar:
-    st.header("📁 Dataset Selection")
-    
+    st.header("Dataset Selection")
+
     dataset_type = st.radio(
         "Choose dataset source:",
         options=["Raw MNIST", "Load from File", "Load .npy file"],
-        help="Select which dataset to browse"
+        help="Select which dataset to browse",
     )
 
     if dataset_type == "Raw MNIST":
@@ -98,47 +99,43 @@ with st.sidebar:
         dataset_name = "raw_mnist"
     elif dataset_type == "Load from File":
         dataset_path = st.text_input(
-            "Enter path to MNIST dataset folder:",
+            "Path to MNIST dataset folder:",
             placeholder="/path/to/mnist/data",
-            help="Must contain train-images-idx3-ubyte and train-labels-idx1-ubyte"
+            help="Must contain train-images-idx3-ubyte and train-labels-idx1-ubyte",
         )
         dataset_name = "custom"
-    else:  # Load .npy file
+    else:
         dataset_path = None
         dataset_name = "npy"
 
-    # .npy file uploaders (shown only when relevant)
     npy_images_file = None
     npy_labels_file = None
     if dataset_type == "Load .npy file":
         npy_images_file = st.file_uploader(
-            "Upload images .npy (N×H×W or H×W):",
+            "Images .npy  (N×H×W or H×W):",
             type=["npy"],
-            help="Float32 [0,1] or uint8 [0,255], shape (N, H, W) or (H, W) for a single image"
+            help="Float32 [0,1] or uint8 [0,255]",
         )
         npy_labels_file = st.file_uploader(
-            "Upload labels .npy (optional):",
+            "Labels .npy  (optional):",
             type=["npy"],
-            help="Integer array of shape (N,) matching the images"
+            help="Integer array of shape (N,) matching the images",
         )
 
-    # Load dataset button
-    if st.button("📂 Load Dataset", use_container_width=True, key="load_dataset_btn"):
+    if st.button("Load Dataset", use_container_width=True, key="load_dataset_btn"):
         if dataset_type == "Load from File" and not dataset_path:
             st.error("Please enter a dataset path")
         elif dataset_type == "Load .npy file" and npy_images_file is None:
             st.error("Please upload a .npy images file")
         else:
-            with st.spinner("Loading dataset..."):
+            with st.spinner("Loading..."):
                 try:
                     if dataset_type == "Load .npy file":
-                        assert npy_images_file is not None  # guarded above
                         raw = np.load(npy_images_file)
                         if raw.ndim == 2:
-                            raw = raw[np.newaxis, ...]   # single image → (1, H, W)
+                            raw = raw[np.newaxis, ...]
                         if raw.ndim != 3:
                             raise ValueError(f"Expected 2D or 3D array, got shape {raw.shape}")
-                        # Normalise to uint8
                         if raw.dtype != np.uint8:
                             if raw.max() <= 1.0:
                                 raw = (raw * 255).clip(0, 255).astype(np.uint8)
@@ -147,7 +144,7 @@ with st.sidebar:
                         images = raw
                         labels = np.load(npy_labels_file) if npy_labels_file is not None else None
                         file_name = npy_images_file.name
-                        msg = f"Loaded {len(images)} images from .npy ({images.shape[1]}×{images.shape[2]} px)"
+                        msg = f"Loaded {len(images)} images ({images.shape[1]}x{images.shape[2]} px)"
                         dataset_name = file_name
                         source = file_name
                     else:
@@ -159,72 +156,68 @@ with st.sidebar:
                     st.session_state.dataset_source = source
                     st.session_state.dataset_name = dataset_name
                     st.session_state.current_image_idx = 0
+                    st.session_state["image_index"] = 0
+                    st.session_state.is_cultivar17 = _detect_cultivar17(labels)
                     st.session_state.session = TaggingSession(
                         images, labels, source_dataset=dataset_name
                     )
                     st.success(msg)
                 except Exception as e:
-                    st.error(f"Error loading dataset: {str(e)}")
-    
-    # Dataset info
+                    st.error(f"Error loading dataset: {e}")
+
     if st.session_state.images is not None:
         st.divider()
-        st.subheader("📊 Dataset Info")
+        st.subheader("Dataset Info")
         st.metric("Total Images", len(st.session_state.images))
-        st.metric("Image Size", f"{st.session_state.images.shape[1]}×{st.session_state.images.shape[2]}")
-        st.metric("Unique Labels", len(np.unique(st.session_state.labels)) if st.session_state.labels is not None else "N/A")
-    
-    # Load existing tagged dataset
+        st.metric("Image Size", f"{st.session_state.images.shape[1]}x{st.session_state.images.shape[2]}")
+        st.metric(
+            "Unique Labels",
+            len(np.unique(st.session_state.labels)) if st.session_state.labels is not None else "N/A",
+        )
+
     st.divider()
-    st.subheader("📋 Load Tagged Dataset")
-    
+    st.subheader("Load Tagged Dataset")
+
     existing_file = st.file_uploader(
         "Upload JSON tagged dataset:",
         type="json",
-        help="Load a previously saved tagged dataset for reference/duplicate checking"
+        help="Load a previously saved tagged dataset for reference/duplicate checking",
     )
-    
     if existing_file is not None:
         try:
             data = json.load(existing_file)
             st.session_state.existing_dataset = TaggedDataset(**data)
             st.success(f"Loaded {len(st.session_state.existing_dataset.images)} existing tags")
         except Exception as e:
-            st.error(f"Error loading JSON: {str(e)}")
-    
-    # Export section
+            st.error(f"Error loading JSON: {e}")
+
     st.divider()
-    st.subheader("💾 Export Tagged Dataset")
-    
+    st.subheader("Export Tagged Dataset")
+
     if st.session_state.session is not None:
         summary = st.session_state.session.get_summary()
-        if summary['images_tagged'] > 0:
-            st.info(f"✓ {summary['images_tagged']} images tagged")
-            
-            # Export filename
+        if summary["images_tagged"] > 0:
+            st.info(f"{summary['images_tagged']} images tagged")
             export_name = st.text_input(
                 "Export filename (without .json):",
                 value="tagged_mnist",
-                help="Filename for the exported JSON dataset"
             )
-            
-            if st.button("📤 Export to JSON", use_container_width=True, key="export_btn"):
+            if st.button("Export to JSON", use_container_width=True, key="export_btn"):
                 output_path = project_root / "data" / "tagged" / f"{export_name}.json"
                 result = st.session_state.session.export_to_json(str(output_path))
-                
-                if result['success']:
-                    st.success(result['message'])
-                    with open(output_path, 'rb') as f:
+                if result["success"]:
+                    st.success(result["message"])
+                    with open(output_path, "rb") as f:
                         st.download_button(
-                            label="⬇️ Download JSON",
+                            label="Download JSON",
                             data=f.read(),
                             file_name=f"{export_name}.json",
-                            mime="application/json"
+                            mime="application/json",
                         )
                 else:
-                    st.error(result['message'])
+                    st.error(result["message"])
         else:
-            st.warning("No images tagged yet. Add images first!")
+            st.warning("No images tagged yet.")
 
 
 # ============================================================================
@@ -232,268 +225,262 @@ with st.sidebar:
 # ============================================================================
 
 if st.session_state.images is None:
-    st.info("👈 Select and load a dataset from the sidebar to begin")
+    st.info("Select and load a dataset from the sidebar to begin.")
 else:
-    # Create tabs for different views
-    tab1, tab2, tab3, tab4 = st.tabs(["🖼️ Image Viewer", "🏷️ Batch Tagging", "📊 Dataset Summary", "🗂️ Gallery"])
-    
+    tab1, tab2, tab3, tab4 = st.tabs(["Image Viewer", "Batch Tagging", "Summary", "Gallery"])
+
     # ========================================================================
     # TAB 1: IMAGE VIEWER
     # ========================================================================
     with tab1:
-        st.subheader("Image Browser & Tagger")
-        
-        # Navigation controls
-        col1, col2, col3, col4, col5 = st.columns(5)
-        
+        N = len(st.session_state.images)
+
+        # Navigation controls — bottom-aligned so buttons sit level with the input
+        col1, col2, col3, col4, col5 = st.columns(5, vertical_alignment="bottom")
+
         with col1:
-            if st.button("⬅️ Previous", use_container_width=True):
-                st.session_state.current_image_idx = max(0, st.session_state.current_image_idx - 1)
-        
+            if st.button("< Previous", use_container_width=True):
+                new = max(0, st.session_state.current_image_idx - 1)
+                st.session_state.current_image_idx = new
+                st.session_state["image_index"] = new
+
         with col2:
             new_idx = st.number_input(
                 "Go to image:",
                 min_value=0,
-                max_value=len(st.session_state.images) - 1,
+                max_value=N - 1,
                 value=st.session_state.current_image_idx,
-                key="image_index"
+                key="image_index",
             )
-            st.session_state.current_image_idx = new_idx
-        
+            st.session_state.current_image_idx = int(new_idx)
+
         with col3:
-            if st.button("Next ➡️", use_container_width=True):
-                st.session_state.current_image_idx = min(
-                    len(st.session_state.images) - 1,
-                    st.session_state.current_image_idx + 1
-                )
-        
+            if st.button("Next >", use_container_width=True):
+                new = min(N - 1, st.session_state.current_image_idx + 1)
+                st.session_state.current_image_idx = new
+                st.session_state["image_index"] = new
+
         with col4:
-            st.metric("Position", f"{st.session_state.current_image_idx + 1} / {len(st.session_state.images)}")
-        
+            st.metric("Position", f"{st.session_state.current_image_idx + 1} / {N}")
+
         with col5:
-            if st.button("🔄 Random", use_container_width=True):
-                st.session_state.current_image_idx = np.random.randint(0, len(st.session_state.images))
-        
+            if st.button("Random", use_container_width=True):
+                new = int(np.random.randint(0, N))
+                st.session_state.current_image_idx = new
+                st.session_state["image_index"] = new
+
         # Display current image
         current_idx = st.session_state.current_image_idx
         current_image = st.session_state.images[current_idx]
-        current_label = st.session_state.labels[current_idx] if st.session_state.labels is not None else None
-        
+        current_label = (
+            st.session_state.labels[current_idx]
+            if st.session_state.labels is not None
+            else None
+        )
+
         col1, col2 = st.columns([1, 2])
-        
+
         with col1:
-            # Display with resizing option
             display_size = st.slider("Display size:", 100, 400, 200, step=50)
             resized_image = resize_image(current_image, (display_size, display_size))
             st.image(resized_image, caption=f"Image #{current_idx}", width=display_size)
-        
+
         with col2:
-            st.subheader("📋 Image Details")
-            
-            # Image stats
+            st.subheader("Image Details")
+
             stats = get_image_stats(current_image)
             col_a, col_b = st.columns(2)
             with col_a:
                 st.metric("Height", f"{stats['height']} px")
                 st.metric("Width", f"{stats['width']} px")
-                st.metric("Min Pixel", stats['min'])
+                st.metric("Min Pixel", stats["min"])
             with col_b:
-                st.metric("Max Pixel", stats['max'])
+                st.metric("Max Pixel", stats["max"])
                 st.metric("Mean", f"{stats['mean']:.1f}")
                 st.metric("Std Dev", f"{stats['std']:.1f}")
-            
-            # Hash info
+
             current_hash = hash_image(current_image)
-            st.text_area(
-                "MD5 Hash (for deduplication):",
-                value=current_hash,
-                height=50,
-                disabled=True
-            )
-            
-            # Original label
+            st.text_area("MD5 Hash:", value=current_hash, height=50, disabled=True)
+
+            # Label — show digit + variant name for CultiVar-17, raw value otherwise
             if current_label is not None:
-                st.info(f"**Original Label:** {int(current_label)}")
-            
-            # Duplicate check
+                raw = int(current_label)
+                if st.session_state.get("is_cultivar17") and 0 <= raw <= 16:
+                    try:
+                        from src.variants17.label_schema import CLASS17_TO_DIGIT10, LABELS_17
+                        digit = CLASS17_TO_DIGIT10[raw]
+                        variant = LABELS_17[raw]
+                        st.info(f"Label: **{digit}**  ({variant})")
+                    except Exception:
+                        st.info(f"Label: {raw}")
+                else:
+                    st.info(f"Label: **{raw}**")
+
             st.divider()
-            if st.button("⚠️ Check for Duplicates", use_container_width=True):
+            if st.button("Check for Duplicates", use_container_width=True):
                 candidates = st.session_state.session.get_duplicate_candidates(
-                    current_idx,
-                    st.session_state.existing_dataset
+                    current_idx, st.session_state.existing_dataset
                 )
                 if candidates:
-                    st.warning("**⚠️ Potential Duplicates Found!**")
+                    st.warning("Potential duplicates found")
                     for dup in candidates:
-                        if dup['location'] == 'existing_dataset':
+                        if dup["location"] == "existing_dataset":
                             st.write(f"- In loaded dataset (ID: {dup['id']})")
                             st.write(f"  Tags: {', '.join(dup['tags']) or 'None'}")
                         else:
                             st.write(f"- In current session (Image #{dup['session_index']})")
                             st.write(f"  Tags: {', '.join(dup['tags']) or 'None'}")
                 else:
-                    st.success("✓ No duplicates found")
-        
+                    st.success("No duplicates found")
+
         # Tagging interface
         st.divider()
-        st.subheader("🏷️ Add Tags")
-        
-        col1, col2 = st.columns([2, 1])
+        st.subheader("Add Tags")
+
+        col1, col2 = st.columns([2, 1], vertical_alignment="bottom")
         with col1:
             new_tag = st.text_input(
-                "Enter tag name:",
-                placeholder="e.g., US-style, rotated, crossed, italic",
-                key=f"tag_input_{current_idx}"
+                "Tag:",
+                placeholder="e.g., crossed, italic, ambiguous",
+                key=f"tag_input_{current_idx}",
             )
-        
         with col2:
-            if st.button("➕ Add Tag", use_container_width=True):
+            if st.button("Add Tag", use_container_width=True):
                 if new_tag.strip():
                     image_in_session = any(
                         img.metadata.original_index == current_idx
                         for img in st.session_state.session.tagged_dataset.images
                     )
-
                     if image_in_session:
                         if st.session_state.session.add_tag(current_idx, new_tag.strip()):
-                            st.success(f"✓ Added tag: '{new_tag.strip()}'")
+                            st.success(f"Added tag: '{new_tag.strip()}'")
                         else:
-                            st.error("Could not add tag to existing image")
+                            st.error("Could not add tag")
                     else:
                         result = st.session_state.session.add_image(
                             current_idx,
                             tags=[new_tag.strip()],
-                            existing_dataset=st.session_state.existing_dataset
+                            existing_dataset=st.session_state.existing_dataset,
                         )
-                        if result['success']:
-                            if result['duplicate_found']:
-                                st.warning(f"⚠️ Duplicate warning: {result['duplicate_info']['message']}")
-                            st.success(f"✓ Added image and tag: '{new_tag.strip()}'")
+                        if result["success"]:
+                            if result["duplicate_found"]:
+                                st.warning(f"Duplicate warning: {result['duplicate_info']['message']}")
+                            st.success(f"Added tag: '{new_tag.strip()}'")
                         else:
-                            st.error(result['message'])
+                            st.error(result["message"])
                     st.rerun()
-        
-        # Display current tags
+
         current_tagged_img = next(
-            (img for img in st.session_state.session.tagged_dataset.images 
-             if img.metadata.original_index == current_idx),
-            None
+            (
+                img
+                for img in st.session_state.session.tagged_dataset.images
+                if img.metadata.original_index == current_idx
+            ),
+            None,
         )
-        
+
         if current_tagged_img:
             st.subheader("Current Tags")
             cols = st.columns(len(current_tagged_img.tags) + 1)
             for i, tag in enumerate(current_tagged_img.tags):
                 with cols[i]:
-                    if st.button(f"❌ {tag}", key=f"remove_{current_idx}_{tag}"):
+                    if st.button(f"[x] {tag}", key=f"remove_{current_idx}_{tag}"):
                         if st.session_state.session.remove_tag(current_idx, tag):
                             st.success(f"Removed tag: '{tag}'")
                         else:
                             st.error(f"Could not remove tag: '{tag}'")
                         st.rerun()
         else:
-            st.info("No tags added yet. Add your first tag above!")
-        
-        # Add current image to session (if not already added)
-        if not current_tagged_img and st.button("📌 Add Image to Dataset", use_container_width=True):
+            st.caption("No tags added yet.")
+
+        if not current_tagged_img and st.button("Add Image to Dataset", use_container_width=True):
             result = st.session_state.session.add_image(
-                current_idx,
-                existing_dataset=st.session_state.existing_dataset
+                current_idx, existing_dataset=st.session_state.existing_dataset
             )
-            if result['duplicate_found']:
-                st.warning(f"⚠️ Duplicate warning: {result['duplicate_info']['message']}")
-            st.success("Image added to tagged dataset!")
+            if result["duplicate_found"]:
+                st.warning(f"Duplicate warning: {result['duplicate_info']['message']}")
+            st.success("Image added to dataset.")
             st.rerun()
-    
+
     # ========================================================================
     # TAB 2: BATCH TAGGING
     # ========================================================================
     with tab2:
         st.subheader("Batch Operations")
-        
+
         col1, col2 = st.columns(2)
-        
+
         with col1:
             st.markdown("### Add Images by Range")
             start_idx = st.number_input(
                 "Start index:",
                 min_value=0,
                 max_value=len(st.session_state.images) - 1,
-                value=0
+                value=0,
             )
             end_idx = st.number_input(
                 "End index (inclusive):",
                 min_value=0,
                 max_value=len(st.session_state.images) - 1,
-                value=min(99, len(st.session_state.images) - 1)
+                value=min(99, len(st.session_state.images) - 1),
             )
-            
-            batch_tags = st.text_area(
-                "Tags (one per line):",
-                placeholder="tag1\ntag2\ntag3"
-            )
-            
-            if st.button("📥 Add Range to Dataset", use_container_width=True):
+            batch_tags = st.text_area("Tags (one per line):", placeholder="tag1\ntag2")
+
+            if st.button("Add Range to Dataset", use_container_width=True):
                 if start_idx <= end_idx:
-                    tags_list = [t.strip() for t in batch_tags.split('\n') if t.strip()]
+                    tags_list = [t.strip() for t in batch_tags.split("\n") if t.strip()]
                     added_count = 0
                     for idx in range(start_idx, end_idx + 1):
                         result = st.session_state.session.add_image(
                             idx,
                             tags=tags_list,
-                            existing_dataset=st.session_state.existing_dataset
+                            existing_dataset=st.session_state.existing_dataset,
                         )
-                        if result['success']:
+                        if result["success"]:
                             added_count += 1
-                    
-                    st.success(f"✓ Added {added_count} images with {len(tags_list)} tags each")
+                    st.success(f"Added {added_count} images with {len(tags_list)} tags each")
                     st.rerun()
-        
+
         with col2:
             st.markdown("### Quick Stats")
             summary = st.session_state.session.get_summary()
             st.json(summary)
-    
+
     # ========================================================================
-    # TAB 3: DATASET SUMMARY
+    # TAB 3: SUMMARY
     # ========================================================================
     with tab3:
         st.subheader("Tagged Dataset Summary")
-        
+
         summary = st.session_state.session.get_summary()
-        
+
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("Total Images Available", summary['total_images_available'])
+            st.metric("Total Images", summary["total_images_available"])
         with col2:
-            st.metric("Images Tagged", summary['images_tagged'])
+            st.metric("Images Tagged", summary["images_tagged"])
         with col3:
-            st.metric("Unique Tags", summary['num_unique_tags'])
+            st.metric("Unique Tags", summary["num_unique_tags"])
         with col4:
             st.metric("Avg Tags/Image", f"{summary['avg_tags_per_image']:.2f}")
-        
-        # Tag frequency
-        if summary['unique_tags']:
+
+        if summary["unique_tags"]:
             st.divider()
             st.subheader("Tag Usage")
-            
             tag_counts = {}
             for img in st.session_state.session.tagged_dataset.images:
                 for tag in img.tags:
                     tag_counts[tag] = tag_counts.get(tag, 0) + 1
-            
             if tag_counts:
                 import pandas as pd
-                df = pd.DataFrame(list(tag_counts.items()), columns=['Tag', 'Count'])
-                df = df.sort_values('Count', ascending=False)
-                
-                st.bar_chart(df.set_index('Tag'))
+                df = pd.DataFrame(list(tag_counts.items()), columns=["Tag", "Count"])
+                df = df.sort_values("Count", ascending=False)
+                st.bar_chart(df.set_index("Tag"))
                 st.dataframe(df, use_container_width=True)
-        
-        # Duplicate warnings
+
         if st.session_state.session.duplicate_warnings:
             st.divider()
-            st.subheader("⚠️ Duplicate Warnings")
+            st.subheader("Duplicate Warnings")
             for warning in st.session_state.session.duplicate_warnings:
                 st.warning(f"Image #{warning['duplicate_index']}: {warning['message']}")
 
@@ -501,18 +488,17 @@ else:
     # TAB 4: GALLERY
     # ========================================================================
     with tab4:
-        st.subheader("Image Gallery")
+        st.subheader("Gallery")
 
         N = len(st.session_state.images)
 
-        # Page size control
-        gcol1, gcol2, gcol3, gcol4 = st.columns([2, 1, 1, 2])
+        gcol1, gcol2, gcol3, gcol4 = st.columns([2, 1, 1, 2], vertical_alignment="bottom")
         with gcol1:
             new_page_size = st.selectbox(
                 "Images per page:",
                 options=[10, 20, 50],
                 index=[10, 20, 50].index(st.session_state.gallery_page_size),
-                key="gallery_page_size_select"
+                key="gallery_page_size_select",
             )
             if new_page_size != st.session_state.gallery_page_size:
                 st.session_state.gallery_page_size = new_page_size
@@ -524,25 +510,20 @@ else:
         page = min(st.session_state.gallery_page, total_pages - 1)
 
         with gcol2:
-            if st.button("← Prev", disabled=(page == 0), key="gallery_prev"):
+            if st.button("< Prev", disabled=(page == 0), key="gallery_prev"):
                 st.session_state.gallery_page = page - 1
                 st.rerun()
         with gcol3:
-            if st.button("Next →", disabled=(page >= total_pages - 1), key="gallery_next"):
+            if st.button("Next >", disabled=(page >= total_pages - 1), key="gallery_next"):
                 st.session_state.gallery_page = page + 1
                 st.rerun()
         with gcol4:
             start = page * page_size
             end = min(start + page_size, N)
-            st.markdown(
-                f"**Page {page + 1} / {total_pages}** &nbsp; "
-                f"<small>images {start + 1}–{end} of {N}</small>",
-                unsafe_allow_html=True
-            )
+            st.caption(f"Page {page + 1} / {total_pages}  |  {start + 1}-{end} of {N}")
 
         st.divider()
 
-        # Build set of tagged source indices for O(1) lookup per render
         tagged_indices: set = set()
         if st.session_state.session is not None:
             for img in st.session_state.session.tagged_dataset.images:
@@ -555,18 +536,30 @@ else:
             with cols[i % COLS]:
                 thumb = resize_image(st.session_state.images[idx], (112, 112))
                 st.image(thumb, width=112)
-                label_str = (
-                    str(int(st.session_state.labels[idx]))
-                    if st.session_state.labels is not None
-                    else "?"
-                )
-                tag_marker = " ✓" if idx in tagged_indices else ""
+
+                # Build label string
+                lbl = st.session_state.labels[idx] if st.session_state.labels is not None else None
+                if lbl is not None:
+                    raw = int(lbl)
+                    if st.session_state.get("is_cultivar17") and 0 <= raw <= 16:
+                        try:
+                            from src.variants17.label_schema import CLASS17_TO_DIGIT10, LABELS_17
+                            label_str = str(CLASS17_TO_DIGIT10[raw])
+                        except Exception:
+                            label_str = str(raw)
+                    else:
+                        label_str = str(raw)
+                else:
+                    label_str = "?"
+
+                tag_marker = " *" if idx in tagged_indices else ""
                 if st.button(
                     f"#{idx} [{label_str}]{tag_marker}",
                     key=f"gal_{idx}",
                     use_container_width=True,
                 ):
                     st.session_state.current_image_idx = idx
+                    st.session_state["image_index"] = idx
                     st.info(f"Jumped to image #{idx} — switch to Image Viewer tab")
 
 
@@ -575,8 +568,4 @@ else:
 # ============================================================================
 
 st.divider()
-st.markdown("""
----
-**MNIST Browser & Tagger** | Built with Streamlit  
-📂 Data Path: `d:\\Developer\\DigitRecognizer\\`
-""")
+st.caption(f"MNIST Browser  |  Data Path: {project_root}")
