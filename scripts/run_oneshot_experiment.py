@@ -463,6 +463,27 @@ def main(args):
     if local_cnn_acc:
         print(f"\n{'local_cnn (supervised)':<20} {local_cnn_acc*100:>9.2f}%  (reference)")
 
+    # Comparison against pre-fix baseline if a backup exists
+    pre_fix_path = os.path.join(args.report_dir, "oneshot_results_pre_augfix.json")
+    if os.path.exists(pre_fix_path):
+        try:
+            with open(pre_fix_path, encoding="utf-8") as f:
+                old = json.load(f)
+            old_map = {c["name"]: c for c in old.get("configs", [])}
+            new_map = {r["name"]: r for r in results}
+            print("\n=== AUGMENTATION FIX COMPARISON (test acc) ===")
+            print(f"{'Config':<22} {'Before':>12} {'After':>12} {'Delta':>8}")
+            print("-" * 58)
+            for name in ["no_aug_cnn", "elastic_only_cnn", "stroke_only_cnn", "full_aug_cnn", "proto"]:
+                if name in old_map and name in new_map:
+                    before = old_map[name]["mean_test_acc"] * 100
+                    after  = new_map[name]["mean_test_acc"] * 100
+                    delta  = after - before
+                    sign   = "+" if delta >= 0 else ""
+                    print(f"{name:<22} {before:>10.2f}%  {after:>10.2f}%  {sign}{delta:>6.2f}pp")
+        except Exception as e:
+            print(f"[oneshot] could not print comparison: {e}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

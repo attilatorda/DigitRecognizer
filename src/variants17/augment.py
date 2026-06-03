@@ -46,7 +46,7 @@ def stroke_width_adjust(
         if fg_new.sum() < 5:
             return img01
         out = img01.copy()
-        out = np.where(fg_new, np.maximum(out, 0.85), out)
+        out = np.where(fg_new, np.maximum(out, 0.65), out)
         out = np.where(~fg_new, np.minimum(out, 0.15), out)
         return np.clip(out, 0.0, 1.0).astype(np.float32)
 
@@ -75,7 +75,7 @@ def sample_augmentation_params(
         "elastic_alpha": float(rng.uniform(10.0, 34.0)),
         "elastic_sigma": float(rng.uniform(3.0, 5.0)),
         "stroke_mode": stroke_mode,
-        "stroke_radius": int(rng.choice([1, 2])),
+        "stroke_radius": 1,
         "stroke_blur_sigma": float(rng.uniform(0.6, 1.2)),
         "noise_std": float(rng.uniform(0.01, 0.04)),
     }
