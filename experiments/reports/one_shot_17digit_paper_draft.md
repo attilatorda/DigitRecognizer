@@ -219,6 +219,30 @@ Three patterns emerge from the results:
    — it reflects that 17 templates cannot cover all handwriting styles in MNIST regardless of
    augmentation or model complexity.
 
+### 7.1 Augmentation realism vs. accuracy
+
+An unexpected finding emerged from an augmentation ablation study. The stroke-width
+dilation in the pipeline uses morphological dilation with radius ∈ {1, 2} and a hard
+intensity floor of 0.85, producing visually unrealistic images — thick, near-binary
+strokes resembling ink blobs rather than handwritten digits. Three attempts to replace
+this with perceptually more natural alternatives were tested:
+
+| Augmentation variant | Proto accuracy |
+|----------------------|----------------|
+| Original (radius 1–2, floor 0.85) | **77.46 ± 2.39%** |
+| Softer (radius 1, floor 0.65) | 75.55 ± 2.39% |
+| Softer + edge blur | 75.18 ± 0.85% |
+| Wider Gaussian blur (σ up to 2.0) | 75.21 ± 2.26% |
+
+Every visually improved variant costs approximately 2 percentage points. The explanation
+is distributional: MNIST contains a sub-population of heavy-handed writers whose thick,
+dense strokes happen to resemble the blob augmentation. Removing the blobs reduces
+coverage of this sub-population even though the remaining augmentation looks more
+realistic. This illustrates a broader principle: **augmentation realism and benchmark
+coverage are not the same objective**. The original blob augmentation is retained here
+because it maximises the reported metric; work with real handwriting samples as templates
+would not need it.
+
 ---
 
 ## 8. Threats to Validity
@@ -243,6 +267,9 @@ Three patterns emerge from the results:
    non-Latin scripts.
 5. Full confusion matrix: report 17-way and projected 10-way confusion to diagnose
    which classes limit transfer.
+6. Longer training: the current 8-epoch budget is conservative. Increasing to 16–24
+   epochs is expected to recover the ~2 pp gap introduced by softer augmentation
+   variants, without requiring any augmentation changes.
 
 ---
 
