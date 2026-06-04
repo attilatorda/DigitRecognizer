@@ -34,14 +34,15 @@ from src.variants17.label_schema import CLASS17_TO_DIGIT10
 PHASE1_CLASS_IDS = [10, 12, 13, 15]  # 3, 5, 6, 8
 
 
-def build_model(num_classes: int, dim: int = 32) -> ConditionalGaussianDiffusion:
+def build_model(num_classes: int, dim: int = 32, timesteps: int = 1000) -> ConditionalGaussianDiffusion:
     unet = Unet(dim=dim, channels=1, dim_mults=(1, 2, 4))
+    sampling_timesteps = min(100, timesteps)
     return ConditionalGaussianDiffusion(
         unet,
         num_classes=num_classes,
         image_size=28,
-        timesteps=1000,
-        sampling_timesteps=100,
+        timesteps=timesteps,
+        sampling_timesteps=sampling_timesteps,
     )
 
 
@@ -105,7 +106,7 @@ def main(args):
     )
 
     # ----------------------------------------------------------------- model
-    model = build_model(num_classes=num_classes, dim=args.dim).to(device)
+    model = build_model(num_classes=num_classes, dim=args.dim, timesteps=args.timesteps).to(device)
 
     if args.resume:
         resume_path = os.path.join(ROOT, args.resume) if not os.path.isabs(args.resume) else args.resume
@@ -146,6 +147,7 @@ if __name__ == "__main__":
     p.add_argument("--batch-size",    type=int,   default=128)
     p.add_argument("--lr",            type=float, default=2e-4)
     p.add_argument("--dim",           type=int,   default=32,   help="U-Net base dim")
+    p.add_argument("--timesteps",     type=int,   default=1000, help="Diffusion timesteps")
     p.add_argument("--save-every",    type=int,   default=50)
     p.add_argument("--resume",        type=str,   default="",   help="Checkpoint path to resume from")
     p.add_argument("--max-per-class", type=int,   default=5000, help="Phase 1: max MNIST images per class")
