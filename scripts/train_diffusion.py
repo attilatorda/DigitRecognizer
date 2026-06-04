@@ -116,14 +116,23 @@ def main(args):
     scaler = torch.amp.GradScaler() if device.type == "cuda" else None
 
     # ----------------------------------------------------------------- train
+    import time
+    t_start = time.perf_counter()
+
     for epoch in range(1, args.epochs + 1):
         loss = train_one_epoch(model, loader, opt, device, scaler)
-        print(f"[diffusion] epoch={epoch}/{args.epochs}  loss={loss:.4f}")
+        elapsed = time.perf_counter() - t_start
+        remaining = elapsed / epoch * (args.epochs - epoch)
+        print(
+            f"[diffusion] epoch={epoch}/{args.epochs}  loss={loss:.4f}"
+            f"  elapsed={elapsed/60:.1f}min  eta={remaining/60:.1f}min",
+            flush=True,
+        )
 
         if epoch % args.save_every == 0:
             ckpt = os.path.join(ckpt_dir, f"phase{args.phase}_epoch{epoch:04d}.pt")
             model.save(ckpt)
-            print(f"[diffusion] saved {ckpt}")
+            print(f"[diffusion] saved {ckpt}", flush=True)
 
     final = os.path.join(ckpt_dir, f"phase{args.phase}_final.pt")
     model.save(final)

@@ -35,7 +35,7 @@ class Grayscale28Dataset(Dataset):
 
     def _init_folder(self, root: str, class_ids: list[int] | None = None):
         root = Path(root)
-        self._items: list[tuple[Path, int]] = []
+        images, labels = [], []
         for cls_dir in sorted(root.iterdir()):
             if not cls_dir.is_dir():
                 continue
@@ -45,8 +45,13 @@ class Grayscale28Dataset(Dataset):
                 continue
             if class_ids is not None and cls_id not in class_ids:
                 continue
-            for img_path in cls_dir.glob("*.png"):
-                self._items.append((img_path, cls_id))
+            for img_path in sorted(cls_dir.glob("*.png")):
+                img = Image.open(img_path).convert("L").resize((28, 28), Image.NEAREST)
+                images.append(np.array(img, dtype=np.float32) / 255.0)
+                labels.append(cls_id)
+        self._images = np.stack(images, axis=0)   # (N, 28, 28) float32
+        self._labels = np.array(labels, dtype=np.int64)
+        print(f"[dataset] loaded {len(self._images)} images into RAM")
 
     def _init_npy(self, images_path: str, labels_path: str):
         images = np.load(images_path)
@@ -57,19 +62,11 @@ class Grayscale28Dataset(Dataset):
         self._labels = labels.astype(np.int64)
 
     def __len__(self) -> int:
-        if hasattr(self, "_items"):
-            return len(self._items)
         return len(self._images)
 
     def __getitem__(self, idx: int):
-        if hasattr(self, "_items"):
-            path, cls_id = self._items[idx]
-            img = Image.open(path).convert("L").resize((28, 28), Image.NEAREST)
-            x = torch.tensor(np.array(img, dtype=np.float32) / 255.0).unsqueeze(0)
-            return x, torch.tensor(cls_id, dtype=torch.int64)
-        else:
-            x = torch.tensor(self._images[idx]).unsqueeze(0)
-            return x, torch.tensor(self._labels[idx], dtype=torch.int64)
+        x = torch.tensor(self._images[idx]).unsqueeze(0)
+        return x, torch.tensor(self._labels[idx], dtype=torch.int64)
 
 
 def prepare_mnist_phase1(
