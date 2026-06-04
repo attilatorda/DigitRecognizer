@@ -150,15 +150,16 @@ def extract_features(skeleton_u8: np.ndarray) -> list:
             total = sum(edge_length(edges[ei]['pixels']) for ei in straight)
             features.append((3, 'open_polygon', _size_class(total / max(len(straight),1), diag)))
 
-    # Closed loop: isolated loop pixels or cycles formed by two edges sharing endpoints
-    if graph['isolated']:
-        # Estimate loop diameter from isolated pixel cluster bounding box
-        rows = [p[0] for p in graph['isolated']]
-        cols = [p[1] for p in graph['isolated']]
-        h = max(rows) - min(rows) + 1 if rows else 1
-        w = max(cols) - min(cols) + 1 if cols else 1
-        loop_size = np.sqrt(h*h + w*w)
-        features.append((3, 'closed_loop', _size_class(loop_size, diag)))
+    # Closed loop: one per loop_node cluster (a clean 0 = 1 loop, an 8 = 2 loops)
+    for node in nodes:
+        if node['type'] == 'loop_node':
+            lp = node.get('pixels', [node['pos']])
+            rows = [p[0] for p in lp]
+            cols = [p[1] for p in lp]
+            h = max(rows) - min(rows) + 1
+            w = max(cols) - min(cols) + 1
+            loop_size = np.sqrt(h*h + w*w)
+            features.append((3, 'closed_loop', _size_class(loop_size, diag)))
 
     # Detect 2-edge cycles: two edges with same pair of endpoints
     seen_pairs = {}
