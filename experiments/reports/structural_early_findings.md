@@ -9,10 +9,15 @@ One-shot MNIST recognition from 17 CultiVar templates using structural features
 
 | Metric | Value |
 |--------|------:|
-| MNIST accuracy (100-image smoke) | **~33%** |
+| **MNIST accuracy (full 10K test)** | **35.81%** |
+| MNIST accuracy (100-image smoke) | ~33% |
 | Random chance (10 digits) | 10% |
 | Variants17 proto baseline (CNN) | 77.46% |
-| Speed | ~500 images/sec (0.1s for 100) |
+| Speed | ~980 images/sec (10.2s for 10K) |
+
+Full 10K test run completes in ~10 seconds and reaches **35.81%** — above the 100-image
+smoke estimate, well above the 10% chance floor, and 41.65pp below the CNN baseline.
+Raw numbers: `experiments/reports/structural_results.json`.
 
 **Interpretation:** well above chance, so the structural primitives carry genuine
 class signal — but far below the CNN baseline. The approach is fast and fully
