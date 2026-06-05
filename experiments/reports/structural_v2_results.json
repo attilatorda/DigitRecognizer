@@ -1,0 +1,11 @@
+{
+  "bank": "both",
+  "n_reference": 8704,
+  "feature_dim": 88,
+  "logreg_acc": 0.6295,
+  "knn_acc": 0.6543,
+  "knn_k": 5,
+  "elapsed_s": 49.294262499999604,
+  "v1_acc": 0.3581,
+  "proto_baseline": 0.7746
+}

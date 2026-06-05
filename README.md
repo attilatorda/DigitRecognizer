@@ -40,11 +40,12 @@ learnable from raw pixels. Fusion nearly matches raw; skeleton-only always under
 | **Proto embedding (morphological aug)** | **77.46% ± 2.39** | 4 |
 | Proto embedding (DDPM-generated data) | 73.70% | 5 |
 | DDPM no-aug CNN | 72.17% | 5 |
-| Full-aug CNN (morphological) | 65.19% | 4 |
 | DDPM full-aug CNN | 68.39% | 5 |
+| **Structural v2 (rich features + 8704-image bank, kNN)** | **65.43%** | 6 |
+| Full-aug CNN (morphological) | 65.19% | 4 |
 | No-aug CNN (morphological) | 51.20% | 4 |
 | Nearest-template (L2) | 38.60% | 4 |
-| **Structural bag-of-features (1-NN)** | **35.81%** | 6 |
+| Structural v1 (1-NN, 17 templates) | 35.81% | 6 |
 | Random chance | 10.00% | — |
 
 **Track 4 finding:** a prototype-embedding model reaches 78% of supervised accuracy from
@@ -58,9 +59,11 @@ compromise (dim=16, timesteps=250). Stacking morphological augmentation *on top*
 images hurts (already varied).
 
 **Track 6 finding:** explicit structural features (endpoints, junctions, loops, typed
-segments) give ~4× chance from 17 templates with zero learning, in 10s on the full 10K
-test set. Limited by feature granularity — open single-stroke digits (1/2/3/5/7) collapse
-to identical descriptors.
+segments) reach 35.81% from 17 templates with 1-NN and zero learning. Two upgrades —
+richer 88-dim descriptors (orientation histogram, curvature/inflection, geometry,
+endpoint/loop position) and a large reference bank (features from 8704 augmented+DDPM
+images + a kNN classifier) — nearly double it to **65.43%**, within 12pp of the CNN
+baseline. The reference bank was the dominant lever (17 → 8704 reference vectors).
 
 ---
 

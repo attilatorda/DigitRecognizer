@@ -52,6 +52,38 @@ discriminating information is in the **shape of that stroke** (its curvature pro
 orientation, number of inflection points), which the current straight/curved/bent +
 size classification throws away.
 
+## v2 — rich features + reference bank + trained classifier
+
+Both improvements from the milestone were implemented and run on the full 10K test:
+
+1. **Rich features** (`src/structural/rich_features.py`): the 60-dim bag is extended to
+   an 88-dim vector adding an orientation histogram (8 length-weighted bins),
+   curvature/inflection statistics, geometry (aspect ratio, density, centroid), an
+   endpoint vertical profile, and loop top/bottom position (a 6-vs-9-vs-8 discriminator).
+2. **Reference bank + classifier** (`scripts/run_structural_v2_experiment.py`): instead
+   of 1-NN against 17 clean templates, features are extracted from thousands of
+   augmented training images and a LogisticRegression / kNN classifier is trained.
+
+### v2 results (full 10K test)
+
+| Reference bank | n images | LogReg | kNN (k=5) | Best |
+|----------------|---------:|-------:|----------:|-----:|
+| morphological | 4352 | 63.84% | 62.53% | 63.84% |
+| ddpm | 4352 | 62.31% | 63.90% | 63.90% |
+| **both** | **8704** | 62.95% | **65.43%** | **65.43%** |
+
+| Milestone | One-shot MNIST |
+|-----------|---------------:|
+| v1 (1-NN, 17 templates, 60-dim) | 35.81% |
+| **v2 (kNN, 8704-image bank, 88-dim)** | **65.43%** |
+| Variants17 proto baseline (CNN) | 77.46% |
+
+**Track 6 nearly doubled: 35.81% -> 65.43% (+29.62pp), still 12pp below the CNN
+baseline.** The reference bank was the dominant lever (17 -> 8704 reference vectors
+captures real within-class variation); richer features and the combined
+morphological+DDPM bank each added a few points. Runs in ~50s on the full test set.
+Raw numbers: `experiments/reports/structural_v2_results.json`.
+
 ## Next steps (milestone)
 
 To make Track 6 competitive, L2 edge descriptors need to be richer:
