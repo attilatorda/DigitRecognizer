@@ -6,8 +6,15 @@ __pycache__/
 .venv/
 venv/
 
-# Data and artifacts
-data/
+# Data artifacts are ignored, EXCEPT the small CultiVar-17 dataset (paper contribution)
+data/*
+!data/processed/
+data/processed/*
+!data/processed/17digits_fixed_equal_height_thickness.png
+!data/processed/mnist17_variants/
+data/processed/mnist17_variants/*
+!data/processed/mnist17_variants/train_images.npy
+!data/processed/mnist17_variants/train_labels17.npy
 mnist_data/
 *.npz
 *.pt

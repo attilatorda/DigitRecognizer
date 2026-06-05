@@ -152,5 +152,28 @@ The split captures culturally common handwriting differences (e.g. American vs E
 - `7`: crossed vs uncrossed
 - alternate handwritten styles for `2`, `4`, `9`
 
-For MNIST evaluation the 17 style classes collapse to 10 canonical digits via a fixed map
-(`src/variants17/label_schema.py`).
+For MNIST evaluation the 17 style classes collapse to 10 canonical digits via a fixed,
+**surjective** map (`src/variants17/label_schema.py`) — each variant maps to its base digit
+(e.g. `0_variant_a`, `0_variant_b` → 0).
+
+### Dataset availability
+
+The CultiVar-17 dataset ships **in-repo** (it is small — ~27 KB total):
+- `data/processed/mnist17_variants/train_images.npy` — 17 × 28 × 28 uint8 templates
+- `data/processed/mnist17_variants/train_labels17.npy` — labels 0–16
+- `data/processed/17digits_fixed_equal_height_thickness.png` — the source composite
+
+The templates are regenerable from the source image:
+
+```bash
+python -m src.variants17.generate_variants17
+```
+
+(All other `data/` artifacts — `mnist_data/`, augmented/generated `.npy` sets — are large
+and gitignored; they are reproduced on demand by the run commands above.)
+
+### A note on epochs
+
+`experiments/configs/*.yaml` (`epochs: 3`/`5`) configure the **supervised** Tracks 1–3.
+The one-shot paper experiment (Track 4) is driven by `scripts/run_oneshot_experiment.py`,
+which trains for **8 epochs** (its `--epochs` default) — this is the value the paper reports.
