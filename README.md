@@ -131,7 +131,7 @@ Browse MNIST/`.npy` datasets, tag images, detect duplicates, view a paginated ga
 ## Reports & analysis
 
 - [Reports Index (HTML)](experiments/reports/index.html)
-- [CultiVar-17 one-shot paper draft](experiments/reports/one_shot_17digit_paper_draft.md) — also `cultivar17_paper.pdf` (IEEEtran)
+- **CultiVar-17 paper (canonical):** `experiments/reports/cultivar17_paper.pdf` (IEEEtran, 5pp) — source `cultivar17_paper.tex`; [short summary](experiments/reports/one_shot_17digit_paper_draft.md)
 - [Diffusion track status & results](experiments/reports/diffusion_track_status.md)
 - [Structural early findings](experiments/reports/structural_early_findings.md)
 - [Skeleton CNN vs Local CNN analysis (HTML)](experiments/reports/skeleton_vs_local_analysis.html)
