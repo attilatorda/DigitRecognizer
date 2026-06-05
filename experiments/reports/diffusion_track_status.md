@@ -1,5 +1,31 @@
 # Track 5 (Diffusion) — Status & How to Continue
 
+**Last updated:** 2026-06-05
+
+## High-capacity result (dim=32, timesteps=1000, GPU) — milestone CONFIRMED
+
+Re-ran the full pipeline at dim=32 / timesteps=1000 on a GTX 1660 SUPER (CUDA build
+`torch 2.11.0+cu128`, fp32 — fp16/AMP produces NaN on Turing so it is opt-in via
+`--amp`). Phase 1: 50 epochs, 23 min, loss 0.0398. Phase 2: 100 epochs, ~10 min,
+loss ~0.036. Generation + eval on GPU.
+
+| Config | morphological | dim=16 DDPM | **dim=32 DDPM** |
+|--------|------:|------:|------:|
+| no_aug CNN | 51.20% | 72.17% | 71.45% ± 3.44 |
+| full_aug CNN | 65.19% | 68.39% | 68.70% ± 2.70 |
+| proto embedding | **77.46% ± 2.39** | 73.70% | **76.57% ± 1.49** |
+
+**The proto config improved +2.87pp (73.70 → 76.57%) and now statistically matches the
+hand-crafted morphological baseline** (76.57 ± 1.49 vs 77.46 ± 2.39 — error bars overlap
+heavily). The −3.75pp gap from the speed-compromised model closed to −0.89pp purely from
+added capacity, confirming the hypothesis that dim=16/timesteps=250 was the limiter, not
+the approach. The dim=32 `phase2_final.pt` now overwrites the dim=16 checkpoint; raw
+numbers in `diffusion_experiment_results.json`.
+
+---
+
+## Original dim=16 run (CPU) — kept for reference
+
 **Last updated:** 2026-06-04
 
 ## Where it stands

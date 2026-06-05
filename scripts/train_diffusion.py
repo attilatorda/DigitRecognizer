@@ -114,7 +114,9 @@ def main(args):
         print(f"[diffusion] Resumed from {resume_path}")
 
     opt = torch.optim.Adam(model.parameters(), lr=args.lr)
-    scaler = torch.amp.GradScaler() if device.type == "cuda" else None
+    # AMP (fp16) is opt-in: diffusion training is unstable in fp16 on Turing GPUs
+    # (GTX 16xx) and produces NaN loss. Default to fp32 on GPU.
+    scaler = torch.amp.GradScaler() if (device.type == "cuda" and args.amp) else None
 
     # ----------------------------------------------------------------- train
     import time
@@ -149,6 +151,8 @@ if __name__ == "__main__":
     p.add_argument("--dim",           type=int,   default=32,   help="U-Net base dim")
     p.add_argument("--timesteps",     type=int,   default=1000, help="Diffusion timesteps")
     p.add_argument("--save-every",    type=int,   default=50)
+    p.add_argument("--amp", action="store_true",
+                   help="Enable fp16 mixed precision (unstable on GTX 16xx; off by default)")
     p.add_argument("--resume",        type=str,   default="",   help="Checkpoint path to resume from")
     p.add_argument("--max-per-class", type=int,   default=5000, help="Phase 1: max MNIST images per class")
     p.add_argument("--aug-images",    type=str,
