@@ -84,6 +84,32 @@ captures real within-class variation); richer features and the combined
 morphological+DDPM bank each added a few points. Runs in ~50s on the full test set.
 Raw numbers: `experiments/reports/structural_v2_results.json`.
 
+## v3 — classifier zoo + ensemble
+
+To test whether v2's kNN was the bottleneck, a panel of classifiers was trained on the
+same 88-dim features with the combined bank (morphological + high-capacity dim=32 DDPM):
+
+| Classifier | MNIST 10K |
+|------------|----------:|
+| **Random Forest (400 trees)** | **68.01%** |
+| Soft-voting ensemble | 66.77% |
+| HistGradientBoosting | 65.99% |
+| kNN (k=5) — v2's choice | 65.14% |
+| Logistic Regression | 63.12% |
+| MLP (128,64) | 62.19% |
+
+**Track 6 progression: v1 35.81% → v2 65.43% → v3 68.01%.** Random Forest's nonlinear
+feature interactions beat kNN by ~3pp, so the classifier was part of the limiter — but the
+modest gain means the **features** are now the dominant remaining gap (still −9.45pp vs the
+77.46% CNN baseline). The ensemble underperformed RF alone because the weak members (MLP,
+logreg) dragged the vote down. Runs in ~140s. Raw numbers: `structural_v3_results.json`.
+
+**Conclusion for the track:** explicit structural features + a tree classifier reach ~68%
+one-shot from 17 templates with full interpretability and no deep learning — a genuinely
+strong showing for a hand-engineered method, but a clear ceiling ~9pp below learned
+features. Further gains would require either much richer descriptors or a structural+CNN
+hybrid (crosses into Track 4/5 territory).
+
 ## Next steps (milestone)
 
 To make Track 6 competitive, L2 edge descriptors need to be richer:

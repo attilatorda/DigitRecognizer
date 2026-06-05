@@ -41,7 +41,7 @@ learnable from raw pixels. Fusion nearly matches raw; skeleton-only always under
 | Proto embedding (DDPM data, dim=32) | 76.57% ± 1.49 | 5 |
 | DDPM no-aug CNN (dim=32) | 71.45% ± 3.44 | 5 |
 | DDPM full-aug CNN (dim=32) | 68.70% ± 2.70 | 5 |
-| **Structural v2 (rich features + 8704-image bank, kNN)** | **65.43%** | 6 |
+| **Structural v3 (rich features + 8704-image bank, Random Forest)** | **68.01%** | 6 |
 | Full-aug CNN (morphological) | 65.19% | 4 |
 | No-aug CNN (morphological) | 51.20% | 4 |
 | Nearest-template (L2) | 38.60% | 4 |
@@ -61,11 +61,13 @@ size was the limiter, not the approach. Stacking morphological augmentation *on 
 DDPM images hurts (already varied).
 
 **Track 6 finding:** explicit structural features (endpoints, junctions, loops, typed
-segments) reach 35.81% from 17 templates with 1-NN and zero learning. Two upgrades —
+segments) reach 35.81% from 17 templates with 1-NN and zero learning. Three upgrades —
 richer 88-dim descriptors (orientation histogram, curvature/inflection, geometry,
-endpoint/loop position) and a large reference bank (features from 8704 augmented+DDPM
-images + a kNN classifier) — nearly double it to **65.43%**, within 12pp of the CNN
-baseline. The reference bank was the dominant lever (17 → 8704 reference vectors).
+endpoint/loop position), a large reference bank (88-dim features from 8704 augmented+DDPM
+images), and a Random Forest classifier — take it to **68.01%**, within ~9pp of the CNN
+baseline. The reference bank was the dominant lever (17 → 8704 reference vectors); a tree
+classifier added ~3pp over kNN. A fully interpretable, no-deep-learning method ~9pp below
+learned features.
 
 ---
 
