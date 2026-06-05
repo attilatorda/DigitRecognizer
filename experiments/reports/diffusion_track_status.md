@@ -14,6 +14,47 @@ classes (3, 5, 6, 8 → class IDs 10, 12, 13, 15).
 - Checkpoint: `experiments/checkpoints/diffusion/phase1_final.pt`
   (also `phase1_epoch0025.pt`, `phase1_epoch0050.pt`)
 
+**Phase 2 — COMPLETE.** Fine-tuned `phase1_final.pt` on the 17-class CultiVar
+augmented set (4352 images, 100 epochs, dim=16/timesteps=250). Final loss **0.0344**
+(below Phase 1's 0.043 floor — fine-tuning genuinely improved the model).
+Checkpoint: `experiments/checkpoints/diffusion/phase2_final.pt`.
+
+**Generation — COMPLETE.** 4352 DDIM-sampled images (256/class, 17 classes) saved to
+`experiments/checkpoints/diffusion_aug/generated_images.npy` (+ labels).
+
+## RESULTS — DDPM augmentation vs morphological baseline
+
+One-shot MNIST accuracy, DDPM-generated training images vs the Variants17
+morphological-augmentation baseline:
+
+| Config | Morphological baseline | DDPM | Delta |
+|--------|----------------------:|-----:|------:|
+| no_aug CNN | 51.20% | **72.17%** | **+20.97pp** |
+| full_aug CNN | 65.19% | 68.39% | +3.19pp |
+| proto embedding | **77.46%** | 73.70% | -3.75pp |
+
+(DDPM: 3 CNN seeds, 5 proto seeds, 8 epochs, repeats=1 — generated images used
+directly as the training set.)
+
+### Findings
+
+1. **DDPM images are dramatically better raw training data.** The no-augmentation
+   CNN jumped **+21pp** (51→72%): training on 4352 diverse generated digits beats
+   training on 17 templates by a wide margin.
+2. **Stacking morphological augmentation on DDPM images hurts** (full_aug 68.4% <
+   no_aug 72.2%). The generated images are already varied; piling distortions on top
+   degrades them.
+3. **The strong proto+morphological baseline still wins narrowly** (77.46% vs 73.70%,
+   -3.75pp). The dim=16 / timesteps=250 speed compromise caps generation quality;
+   a dim=32 / timesteps=1000 GPU model would likely close or reverse this gap.
+
+**Takeaway:** class-conditional DDPM augmentation is a clear win for plain CNN training
+and competitive with the best hand-crafted pipeline even at a deliberately small model
+size. The natural next step is a higher-capacity DDPM (see caveats below).
+
+Raw numbers: `experiments/reports/diffusion_experiment_results.json`.
+Re-run evaluation: `python scripts/run_diffusion_experiment.py`.
+
 ## How to continue — Phase 2 (fine-tune on all 17 classes)
 
 Phase 2 adapts the Phase-1 model to the full 17-class CultiVar taxonomy using the

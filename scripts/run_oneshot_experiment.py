@@ -105,11 +105,12 @@ def train_cnn_one_seed(
     epochs, batch_size, lr, elastic_prob, stroke_prob,
     out_dir, device,
     save_augmented_dir: str = "",
+    repeats: int = 256,
 ):
     set_seed(seed)
     aug_x, aug_y = augment_dataset(
         templates_u8, labels17,
-        repeats=256, seed=seed,
+        repeats=repeats, seed=seed,
         elastic_prob=elastic_prob, stroke_prob=stroke_prob,
     )
     if save_augmented_dir and seed == 0:
@@ -166,11 +167,12 @@ def train_proto_one_seed(
     epochs, batch_size, lr, emb_dim, elastic_prob, stroke_prob,
     out_dir, device,
     save_augmented_dir: str = "",
+    repeats: int = 256,
 ):
     set_seed(seed)
     aug_x, aug_y = augment_dataset(
         templates_u8, labels17,
-        repeats=256, seed=seed,
+        repeats=repeats, seed=seed,
         elastic_prob=elastic_prob, stroke_prob=stroke_prob,
     )
     if save_augmented_dir and seed == 0:

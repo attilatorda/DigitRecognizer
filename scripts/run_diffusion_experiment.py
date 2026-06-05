@@ -90,36 +90,39 @@ def main(args):
     def _aug_dir(name):
         return os.path.join(out_dir, name, "augmented_train")
 
-    # No-aug CNN (using DDPM images without further augmentation)
+    # The 4352 generated images ARE the training set, so repeats=1 (do NOT
+    # re-augment x256 — that would be 1.1M images/epoch and ~256x slower).
+
+    # No-aug CNN (DDPM images used directly, no further augmentation)
     results.append(run_config(
         "ddpm_no_aug_cnn",
         lambda seed, **kw: train_cnn_one_seed(
             seed=seed, templates_u8=gen_images_u8, labels17=gen_labels,
-            elastic_prob=0.0, stroke_prob=0.0,
+            elastic_prob=0.0, stroke_prob=0.0, repeats=1,
             out_dir=os.path.join(out_dir, "ddpm_no_aug_cnn"),
             save_augmented_dir=_aug_dir("ddpm_no_aug_cnn"), **kw,
         ),
         seeds, **shared,
     ))
 
-    # Full-aug CNN (DDPM images + morphological augmentation on top)
+    # Full-aug CNN (DDPM images + one pass of morphological augmentation)
     results.append(run_config(
         "ddpm_full_aug_cnn",
         lambda seed, **kw: train_cnn_one_seed(
             seed=seed, templates_u8=gen_images_u8, labels17=gen_labels,
-            elastic_prob=0.70, stroke_prob=0.80,
+            elastic_prob=0.70, stroke_prob=0.80, repeats=1,
             out_dir=os.path.join(out_dir, "ddpm_full_aug_cnn"),
             save_augmented_dir=_aug_dir("ddpm_full_aug_cnn"), **kw,
         ),
         seeds, **shared,
     ))
 
-    # Proto embedding (DDPM images + morphological augmentation)
+    # Proto embedding (DDPM images + one pass of morphological augmentation)
     results.append(run_config(
         "ddpm_proto",
         lambda seed, **kw: train_proto_one_seed(
             seed=seed, templates_u8=gen_images_u8, labels17=gen_labels,
-            elastic_prob=0.70, stroke_prob=0.80,
+            elastic_prob=0.70, stroke_prob=0.80, repeats=1,
             emb_dim=64,
             out_dir=os.path.join(out_dir, "ddpm_proto"),
             save_augmented_dir=_aug_dir("ddpm_proto"), **kw,
