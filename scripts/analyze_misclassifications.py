@@ -97,8 +97,8 @@ def main():
     print(f"[analysis] device={device}")
 
     # Paths
-    ckpt_path      = os.path.join(ROOT, "experiments", "checkpoints",
-                                  "oneshot_comparison", "proto", "best_seed0.pt")
+    proto_dir      = os.path.join(ROOT, "experiments", "checkpoints",
+                                  "oneshot_comparison", "proto")
     templates_path = os.path.join(ROOT, "data", "processed", "mnist17_variants",
                                   "train_images.npy")
     labels17_path  = os.path.join(ROOT, "data", "processed", "mnist17_variants",
@@ -109,35 +109,36 @@ def main():
     out_fig        = os.path.join(ROOT, "experiments", "reports", "figures",
                                   "fig4_confusion.png")
 
-    # Load model
-    model = EmbeddingCNN(emb_dim=64).to(device)
-    ckpt = torch.load(ckpt_path, map_location=device)
-    # run_oneshot_experiment saves the state dict directly (not wrapped in {"model": ...})
-    state_dict = ckpt["model"] if isinstance(ckpt, dict) and "model" in ckpt else ckpt
-    model.load_state_dict(state_dict)
-    print(f"[analysis] loaded checkpoint {ckpt_path}")
-
-    # Load templates -> prototypes
     templates_u8 = np.load(templates_path)
     labels17     = np.load(labels17_path)
     support_x01  = templates_u8.astype(np.float32) / 255.0
-    prototypes   = compute_prototypes(model, support_x01, labels17, device)
-
-    # Load MNIST test set
     test_images, test_labels = load_mnist_idx(mnist_path, "t10k")
     print(f"[analysis] MNIST test images: {len(test_images)}")
 
-    # Run inference
-    pred10, pred17 = get_mnist_predictions(model, test_images, prototypes, device)
-    overall_acc = float((pred10 == test_labels).mean())
-    print(f"[analysis] overall accuracy: {overall_acc*100:.2f}%")
-
-    # 10×10 confusion matrix
+    # Aggregate the confusion matrix over ALL proto seed checkpoints (more robust
+    # than a single seed; 5 x 10k = 50k predictions).
+    seed_ckpts = sorted(f for f in os.listdir(proto_dir) if f.startswith("best_seed"))
     cm = np.zeros((10, 10), dtype=int)
-    for t, p in zip(test_labels, pred10):
-        cm[int(t), int(p)] += 1
+    seed_accs = []
+    for fn in seed_ckpts:
+        model = EmbeddingCNN(emb_dim=64).to(device)
+        ckpt = torch.load(os.path.join(proto_dir, fn), map_location=device)
+        state_dict = ckpt["model"] if isinstance(ckpt, dict) and "model" in ckpt else ckpt
+        model.load_state_dict(state_dict)
+        prototypes = compute_prototypes(model, support_x01, labels17, device)
+        pred10, _ = get_mnist_predictions(model, test_images, prototypes, device)
+        seed_accs.append(float((pred10 == test_labels).mean()))
+        for t, p in zip(test_labels, pred10):
+            cm[int(t), int(p)] += 1
+    n_seeds = len(seed_ckpts)
+    overall_acc = float(np.mean(seed_accs))
+    print(f"[analysis] aggregated over {n_seeds} seeds; "
+          f"mean acc {overall_acc*100:.2f}% +- {np.std(seed_accs)*100:.2f}")
 
-    # Per-digit accuracy
+    # Per-seed-averaged confusion matrix (interpretable as a single 10k-image run)
+    cm_avg = (cm / n_seeds).round().astype(int)
+
+    # Per-digit accuracy (ratios are identical whether on cm or cm_avg)
     per_digit_acc = {}
     for d in range(10):
         row_sum = cm[d].sum()
@@ -145,34 +146,36 @@ def main():
 
     print("\n[analysis] Per-digit accuracy:")
     for d in range(10):
-        print(f"  digit {d}: {per_digit_acc[d]*100:.1f}%  "
-              f"(correct={cm[d,d]} / total={cm[d].sum()})")
+        print(f"  digit {d}: {per_digit_acc[d]*100:.1f}%")
 
-    # Top confused pairs (off-diagonal)
+    # Top confused pairs (off-diagonal), per-seed-average counts
+    per_seed_total = len(test_labels)
     confused_pairs = []
     for t in range(10):
         for p in range(10):
-            if t != p and cm[t, p] > 0:
+            if t != p and cm_avg[t, p] > 0:
                 confused_pairs.append({
                     "true": int(t),
                     "pred": int(p),
-                    "count": int(cm[t, p]),
-                    "pct": round(float(cm[t, p]) / len(test_labels) * 100, 3),
+                    "count": int(cm_avg[t, p]),
+                    "pct": round(float(cm_avg[t, p]) / per_seed_total * 100, 3),
                 })
     confused_pairs.sort(key=lambda x: -x["count"])
     top10 = confused_pairs[:10]
 
-    print("\n[analysis] Top confused pairs (true -> predicted):")
+    print("\n[analysis] Top confused pairs (true -> predicted, per-seed avg):")
     for pair in top10:
         print(f"  {pair['true']} -> {pair['pred']:>2}  "
               f"count={pair['count']:>4}  ({pair['pct']:.2f}% of test set)")
 
     # Save JSON
     payload = {
-        "checkpoint": "proto/best_seed0.pt",
+        "source": "proto, aggregated over all seed checkpoints",
+        "n_seeds": n_seeds,
         "overall_accuracy": overall_acc,
+        "per_seed_accuracies": [round(a, 4) for a in seed_accs],
         "per_digit_accuracy": {str(d): round(per_digit_acc[d], 4) for d in range(10)},
-        "confusion_matrix": cm.tolist(),
+        "confusion_matrix_per_seed_avg": cm_avg.tolist(),
         "top_confused_pairs": top10,
     }
     os.makedirs(os.path.dirname(out_json), exist_ok=True)
@@ -180,15 +183,15 @@ def main():
         json.dump(payload, f, indent=2)
     print(f"\n[analysis] saved {out_json}")
 
-    # Figure
+    # Figure (per-seed-average counts for readability)
     os.makedirs(os.path.dirname(out_fig), exist_ok=True)
-    make_confusion_figure(cm, per_digit_acc, out_fig)
+    make_confusion_figure(cm_avg, per_digit_acc, out_fig)
 
     # Suggest improvements
     print("\n[analysis] Improvement hints (worst digits):")
     worst = sorted(per_digit_acc, key=per_digit_acc.get)[:3]
     for d in worst:
-        misses = [(p, cm[d, p]) for p in range(10) if p != d and cm[d, p] > 0]
+        misses = [(p, cm_avg[d, p]) for p in range(10) if p != d and cm_avg[d, p] > 0]
         misses.sort(key=lambda x: -x[1])
         top_miss = [(int(p), int(n)) for p, n in misses[:2]]
         variants = [LABELS_17[c] for c, digit in CLASS17_TO_DIGIT10.items() if digit == d]

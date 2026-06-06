@@ -444,6 +444,23 @@ learning.
   \end{tabular}
 \end{table}
 
+\subsection{Error Analysis}
+\label{sec:errors}
+
+Figure~\ref{fig:confusion} shows the prototype model's confusion matrix, aggregated over
+its five seeds. Errors are highly concentrated rather than uniform: digits 4, 0, and~1 are
+recognised almost perfectly ($>95\%$), while 3 ($44.7\%$), 7 ($48.0\%$), and 9 ($55.6\%$)
+account for most of the loss.
+The dominant confusions are structurally interpretable and trace directly to style
+coverage: \emph{$7\!\to\!1$} (a template-7 with no crossbar is geometrically close to a~1),
+\emph{$3\!\to\!5$} and \emph{$3\!\to\!9$} (open-left curves), and \emph{$9\!\to\!4$}
+(loop-vs-angle ambiguity).
+Critically, the worst classes are precisely those whose MNIST writers span variation the 17
+templates do not cover—the single \texttt{3} template has no variant, and the two \texttt{7}
+templates miss intermediate crossbar styles. This supports the central claim that the
+ceiling is \emph{template style coverage}, not model capacity: the errors are not diffuse
+noise but a targeted, explainable consequence of a 17-template support set.
+
 % ============================================================
 \section{Discussion}
 
@@ -515,7 +532,9 @@ trained on real handwriting samples would not require it.
   \item \textbf{Limited augmentation family}: elastic and stroke perturbations may
         under-represent real handwriting variability (pen angle, slant, baseline drift).
   \item \textbf{Projection artefacts}: the 17$\to$10 class collapse may hide class-specific
-        errors; a full 17-way confusion matrix would give a more complete picture.
+        errors. The 10-way confusion analysis (Section~\ref{sec:errors}) localises the loss
+        to digits 3, 7, and~9; a full 17-way breakdown would further separate per-variant
+        behaviour.
 \end{itemize}
 
 % ============================================================
@@ -586,6 +605,16 @@ available at \url{http://yann.lecun.com/exdb/mnist/}.
            $\pm1$ standard deviation across seeds. Dashed line: supervised CNN reference
            ($99.11\%$).}
   \label{fig:results}
+\end{figure}
+
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\columnwidth]{figures/fig4_confusion.png}
+  \caption{Confusion matrix of the prototype model (aggregated over five seeds) with
+           per-digit accuracy. Errors concentrate on digits 3, 7, and~9, whose dominant
+           confusions ($7\!\to\!1$, $3\!\to\!5$, $9\!\to\!4$) trace to style variation the
+           17 templates do not cover.}
+  \label{fig:confusion}
 \end{figure}
 
 % ============================================================
