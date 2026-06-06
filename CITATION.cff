@@ -1,0 +1,49 @@
+cff-version: 1.2.0
+title: >-
+  CultiVar-17: Three Data-Centric Strategies for One-Shot
+  Digit Recognition from a Culturally-Motivated Template Set
+message: >-
+  If you use this dataset, code, or findings, please cite the
+  paper below.
+type: software
+authors:
+  - given-names: Attila
+    family-names: Torda
+    affiliation: Independent Researcher
+abstract: >-
+  CultiVar-17 is a compact dataset of 17 hand-drawn digit
+  templates capturing stylistic variation motivated by regional
+  and educational handwriting conventions. From these 17
+  templates we study three complementary data-centric strategies
+  for one-shot transfer to MNIST: hand-crafted morphological
+  augmentation (prototype embedding, 77.46%), learned
+  augmentation via a class-conditional diffusion model
+  (78.50%, matches-to-exceeds the hand-crafted pipeline), and an
+  interpretable structural bag-of-features with a tree
+  classifier (72.0%, no deep learning). The augmentation process,
+  not model capacity, is the dominant lever.
+keywords:
+  - one-shot learning
+  - digit recognition
+  - handwriting style
+  - data augmentation
+  - diffusion models
+  - prototype networks
+  - structural pattern recognition
+  - MNIST
+license: MIT
+repository-code: 'https://github.com/REPLACE_WITH_REPO_URL'
+preferred-citation:
+  type: conference-paper
+  title: >-
+    CultiVar-17: Three Data-Centric Strategies for One-Shot
+    Digit Recognition from a Culturally-Motivated Template Set
+  authors:
+    - given-names: Attila
+      family-names: Torda
+      affiliation: Independent Researcher
+  collection-title: >-
+    Proceedings of the International Conference on Frontiers in
+    Handwriting Recognition (ICFHR)
+  year: 2026
+  notes: Submitted.

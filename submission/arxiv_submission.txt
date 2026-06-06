@@ -1,0 +1,62 @@
+================================================================
+arXiv submission metadata — fill the bracketed fields, paste the
+rest into the arXiv web form (https://arxiv.org/submit).
+================================================================
+
+TITLE
+-----
+CultiVar-17: Three Data-Centric Strategies for One-Shot Digit
+Recognition from a Culturally-Motivated Template Set
+
+AUTHORS
+-------
+Attila Torda (Independent Researcher)
+
+PRIMARY CATEGORY
+----------------
+cs.CV   (Computer Vision and Pattern Recognition)
+
+CROSS-LIST (optional)
+---------------------
+cs.LG   (Machine Learning)
+
+COMMENTS (the arXiv "Comments" field)
+-------------------------------------
+6 pages, 4 figures, 6 tables. Submitted to ICFHR 2026. Code and
+data: [REPO URL].
+
+ABSTRACT (plain text — no LaTeX)
+--------------------------------
+We introduce CultiVar-17, a compact dataset of 17 hand-drawn
+digit templates that captures stylistic variation motivated by
+regional and educational handwriting conventions: crossed vs.
+uncrossed zero, European vs. American seven, serif vs. plain one,
+and more. Using only these 17 templates as supervision, we study
+three complementary data-centric strategies for transferring to
+the MNIST test set. (i) Hand-crafted augmentation: a
+prototype-embedding model trained on morphologically augmented
+templates achieves 77.46 +/- 2.39% MNIST accuracy from 17
+examples, 78% of supervised CNN performance. (ii) Learned
+augmentation: a class-conditional denoising diffusion model
+trained to synthesise training images lifts a plain CNN by over
+22 percentage points and, at full capacity with EMA weight
+averaging, matches-to-exceeds the hand-crafted pipeline
+(78.50 +/- 1.76% vs. 77.46%). (iii) Structural recognition: an
+interpretable bag of skeleton-graph features with a tree
+classifier reaches 72.0% with no deep learning. Together these
+show that, given a culturally-grounded template set, the
+augmentation process -- not just model capacity -- is the
+dominant lever in one-shot digit recognition. All code and data
+are publicly available for reproducibility.
+
+FILES TO UPLOAD
+---------------
+- cultivar17_paper.tex          (from experiments/reports/)
+- cultivar17_refs.bib           (from experiments/reports/)
+- figures/fig1_templates.png
+- figures/fig2_augmentation.png
+- figures/fig3_results.png
+- figures/fig4_confusion.png
+(arXiv compiles from source; do NOT upload the PDF as the source.
+ Run bibtex locally first so the .bbl is available, or include the
+ .bbl file alongside the .tex.)
