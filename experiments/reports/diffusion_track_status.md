@@ -2,25 +2,39 @@
 
 **Last updated:** 2026-06-05
 
-## High-capacity result (dim=32, timesteps=1000, GPU) — milestone CONFIRMED
+## Best result (dim=32 + EMA, GPU) — milestone: learned aug BEATS hand-crafted
 
-Re-ran the full pipeline at dim=32 / timesteps=1000 on a GTX 1660 SUPER (CUDA build
-`torch 2.11.0+cu128`, fp32 — fp16/AMP produces NaN on Turing so it is opt-in via
-`--amp`). Phase 1: 50 epochs, 23 min, loss 0.0398. Phase 2: 100 epochs, ~10 min,
-loss ~0.036. Generation + eval on GPU.
+The pipeline was scaled in two stages on a GTX 1660 SUPER (CUDA build `torch 2.11.0+cu128`,
+fp32 — fp16/AMP produces NaN on Turing, opt-in via `--amp`).
 
-| Config | morphological | dim=16 DDPM | **dim=32 DDPM** |
-|--------|------:|------:|------:|
-| no_aug CNN | 51.20% | 72.17% | 71.45% ± 3.44 |
-| full_aug CNN | 65.19% | 68.39% | 68.70% ± 2.70 |
-| proto embedding | **77.46% ± 2.39** | 73.70% | **76.57% ± 1.49** |
+**Stage A (dim=32, no EMA):** Phase 1 50ep/23min/loss 0.0398; Phase 2 100ep. Proto reached
+**76.57% ± 1.49** — closed the dim=16 gap and statistically matched the baseline.
 
-**The proto config improved +2.87pp (73.70 → 76.57%) and now statistically matches the
-hand-crafted morphological baseline** (76.57 ± 1.49 vs 77.46 ± 2.39 — error bars overlap
-heavily). The −3.75pp gap from the speed-compromised model closed to −0.89pp purely from
-added capacity, confirming the hypothesis that dim=16/timesteps=250 was the limiter, not
-the approach. The dim=32 `phase2_final.pt` now overwrites the dim=16 checkpoint; raw
-numbers in `diffusion_experiment_results.json`.
+**Stage B (dim=32 + EMA, more data):** Phase 1 80ep, Phase 2 200ep (loss 0.0299), EMA decay
+0.999, 512 imgs/class, 250 DDIM steps. This is the best result:
+
+| Config | morphological | dim=16 | dim=32 | **dim=32 + EMA** |
+|--------|------:|------:|------:|------:|
+| no_aug CNN | 51.20% | 72.17% | 71.45% | 73.94% ± 1.34 |
+| full_aug CNN | 65.19% | 68.39% | 68.70% | 74.40% ± 1.99 |
+| proto embedding | 77.46% ± 2.39 | 73.70% | 76.57% | **78.50% ± 1.76** |
+
+**The proto config reaches 78.50% — it exceeds the hand-crafted baseline (77.46%) by
++1.04pp, with 4 of 5 seeds above it and tighter variance.** Error bars still overlap, so
+this is matches-to-exceeds rather than a decisive win. Trajectory 73.7 → 76.6 → 78.5%
+tracks generation quality (EMA was the key lever). Also: stacking morphological aug on top
+no longer hurts (full 74.4% ≥ no-aug 73.9%) — clean EMA images tolerate mild extra
+distortion. Raw numbers in `diffusion_experiment_results.json`.
+
+How to reproduce the best result:
+```bash
+python scripts/train_diffusion.py --phase 1 --epochs 80 --dim 32 --timesteps 1000 --ema-decay 0.999
+python scripts/train_diffusion.py --phase 2 --resume experiments/checkpoints/diffusion/phase1_final.pt \
+       --epochs 200 --dim 32 --timesteps 1000 --ema-decay 0.999
+python scripts/generate_diffusion_aug.py --checkpoint experiments/checkpoints/diffusion/phase2_final.pt \
+       --n-per-class 512 --dim 32 --timesteps 1000 --sampling-steps 250
+python scripts/run_diffusion_experiment.py
+```
 
 ---
 

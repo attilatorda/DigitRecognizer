@@ -37,10 +37,10 @@ learnable from raw pixels. Fusion nearly matches raw; skeleton-only always under
 
 | Method | MNIST test acc | Track |
 |--------|---------------:|-------|
-| **Proto embedding (morphological aug)** | **77.46% ± 2.39** | 4 |
-| Proto embedding (DDPM data, dim=32) | 76.57% ± 1.49 | 5 |
-| DDPM no-aug CNN (dim=32) | 71.45% ± 3.44 | 5 |
-| DDPM full-aug CNN (dim=32) | 68.70% ± 2.70 | 5 |
+| **Proto embedding (DDPM data, dim=32 + EMA)** | **78.50% ± 1.76** | 5 |
+| Proto embedding (morphological aug) | 77.46% ± 2.39 | 4 |
+| DDPM full-aug CNN | 74.40% ± 1.99 | 5 |
+| DDPM no-aug CNN | 73.94% ± 1.34 | 5 |
 | **Structural v3 (93-dim features + 8704-image bank, Random Forest)** | **71.98%** | 6 |
 | Full-aug CNN (morphological) | 65.19% | 4 |
 | No-aug CNN (morphological) | 51.20% | 4 |
@@ -53,12 +53,13 @@ just 17 hand-drawn templates. Augmentation is essential (+14pp over no-aug); met
 learning beats classification.
 
 **Track 5 finding:** DDPM-generated training images are dramatically better raw data than
-17 templates — a plain CNN jumps **+20pp** (51.20→71.45%). At full model capacity
-(dim=32, timesteps=1000, GPU) the proto config reaches **76.57% ± 1.49**, statistically
-matching the hand-crafted morphological baseline (77.46% ± 2.39). The dim=16 speed
-compromise had left a −3.75pp gap; scaling capacity closed it to −0.89pp, confirming model
-size was the limiter, not the approach. Stacking morphological augmentation *on top* of
-DDPM images hurts (already varied).
+17 templates — a plain CNN jumps **+22.7pp** (51.20→73.94%). At full quality (dim=32,
+timesteps=1000, **EMA** weight averaging, 512 imgs/class, 250 DDIM steps, GPU) the proto
+config reaches **78.50% ± 1.76**, which **exceeds** the hand-crafted morphological baseline
+(77.46% ± 2.39) by +1.04pp (4/5 seeds above it) — though overlapping error bars make it
+matches-to-exceeds rather than a decisive win. The trajectory 73.7% (dim=16) → 76.6%
+(dim=32) → 78.5% (dim=32+EMA) shows the gain tracks generation quality. Learned augmentation
+now rivals expert-crafted augmentation with zero domain-specific design.
 
 **Track 6 finding:** explicit structural features (endpoints, junctions, loops, typed
 segments) reach 35.81% from 17 templates with 1-NN and zero learning. Three upgrades —

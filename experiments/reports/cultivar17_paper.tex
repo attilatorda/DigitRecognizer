@@ -54,8 +54,9 @@ strategies for transferring to the MNIST test set.
 morphologically augmented templates achieves $77.46 \pm 2.39\%$ MNIST accuracy from 17
 examples—78\% of supervised CNN performance.
 (ii)~\emph{Learned augmentation}: a class-conditional denoising diffusion model trained
-to synthesise training images lifts a plain CNN by over 20~percentage points and, at full
-capacity, statistically matches the hand-crafted pipeline ($76.57 \pm 1.49\%$).
+to synthesise training images lifts a plain CNN by over 22~percentage points and, at full
+capacity with EMA weight averaging, matches-to-exceeds the hand-crafted pipeline
+($78.50 \pm 1.76\%$ vs.\ $77.46\%$).
 (iii)~\emph{Structural recognition}: an interpretable bag of skeleton-graph features with a
 tree classifier reaches $72.0\%$ with no deep learning.
 Together these show that, given a culturally-grounded template set, the augmentation
@@ -89,8 +90,8 @@ Our contributions are:
         perturbation, and affine noise—paired with a prototype-embedding model that reaches
         $77.46\%$ MNIST accuracy from 17 examples, with an ablation over its components.
   \item \textbf{Learned augmentation}—a class-conditional denoising diffusion model
-        \cite{Ho2020} that synthesises training data, lifting a plain CNN by $+20$~pp and,
-        at full capacity, matching the hand-crafted pipeline.
+        \cite{Ho2020} that synthesises training data, lifting a plain CNN by $+22$~pp and,
+        at full capacity with EMA, matching-to-exceeding the hand-crafted pipeline.
   \item \textbf{Structural recognition}—an interpretable bag of skeleton-graph features
         classified by a random forest \cite{Breiman2001}, reaching $72.0\%$ with no deep
         learning.
@@ -241,7 +242,8 @@ At generation time we draw 256 images per class via DDIM sampling \cite{Song2021
 (4{,}352 images total) and use them directly as the training set for the same CNN and
 prototype models above.
 We report two capacities: a small model ($\text{dim}=16$, 250 timesteps) and a
-high-capacity model ($\text{dim}=32$, 1000 timesteps).
+high-capacity model ($\text{dim}=32$, 1000 timesteps); the latter additionally uses
+exponential-moving-average (EMA) weights, 512 images per class, and 250 DDIM sampling steps.
 
 \subsection{Structural Bag-of-Features}
 \label{sec:structural-method}
@@ -358,28 +360,32 @@ provides more consistent improvement.
 
 Table~\ref{tab:diffusion} reports accuracy when the diffusion-generated images replace the
 morphological augmentation as the training set.
-The effect on the plain no-augmentation CNN is dramatic: $+20.97$~pp ($51.20\to72.17\%$),
+The effect on the plain no-augmentation CNN is dramatic: $+22.7$~pp ($51.20\to73.94\%$),
 because the model now trains on thousands of diverse, in-distribution generated digits
 rather than 17 templates.
-The high-capacity model lifts the prototype configuration to $76.57 \pm 1.49\%$, which
-statistically matches the hand-crafted baseline ($77.46 \pm 2.39\%$; the error bars overlap
-heavily); the small model's $-3.75$~pp gap closes to $-0.89$~pp purely from added capacity.
-Notably, applying morphological augmentation \emph{on top} of diffusion images
-\emph{hurts} ($68.7\%<71.5\%$): the generated images are already varied, so further
-distortion is counterproductive.
+With EMA weight averaging, 512 generated images per class, and 250-step DDIM sampling, the
+prototype configuration reaches $78.50 \pm 1.76\%$, which \emph{exceeds} the hand-crafted
+baseline ($77.46 \pm 2.39\%$) by $1.04$~pp with tighter variance (4 of 5 seeds above the
+baseline). We report this as matching-to-exceeding rather than a decisive win, as the error
+bars still overlap. The trajectory across model quality is monotone—$73.7\%$ (small,
+$\text{dim}=16$), $76.6\%$ (high-capacity, no EMA), $78.5\%$ (high-capacity, EMA)—indicating
+the result is driven by generation quality, not chance.
+Unlike the smaller models, here applying light morphological augmentation \emph{on top} of
+the generated images no longer hurts ($74.4\%$ vs.\ $73.9\%$): once the generated images are
+clean enough, mild extra distortion is tolerated rather than counterproductive.
 
 \begin{table}[t]
-  \caption{Learned augmentation: DDPM-generated training data vs.\ the hand-crafted
-           morphological baseline (MNIST test \%).}
+  \caption{Learned augmentation: DDPM-generated training data (high-capacity, EMA,
+           512/class) vs.\ the hand-crafted morphological baseline (MNIST test \%).}
   \label{tab:diffusion}
   \centering
   \begin{tabular}{@{}lrr@{}}
     \toprule
-    Config & Morphological & DDPM (dim 32) \\
+    Config & Morphological & DDPM \\
     \midrule
-    No-aug CNN       & $51.20$ & $71.45 \pm 3.44$ \\
-    Full-aug CNN     & $65.19$ & $68.70 \pm 2.70$ \\
-    Proto embedding  & $\mathbf{77.46 \pm 2.39}$ & $76.57 \pm 1.49$ \\
+    No-aug CNN       & $51.20$ & $73.94 \pm 1.34$ \\
+    Full-aug CNN     & $65.19$ & $74.40 \pm 1.99$ \\
+    Proto embedding  & $77.46 \pm 2.39$ & $\mathbf{78.50 \pm 1.76}$ \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -423,10 +429,10 @@ same unsigned primitive sets—e.g.\ a 2 bends right-then-left where a 3 bends r
 \label{sec:unified}
 
 Table~\ref{tab:unified} places all three strategies on a common scale.
-The two neural augmentation strategies are statistically indistinguishable at the top
-($\sim$77\%); learned augmentation is the stronger \emph{enabler} for a plain CNN, while the
-structural method trades $\sim$5.5~pp of accuracy for full interpretability and no deep
-learning.
+The two neural augmentation strategies sit together at the top ($77$--$78\%$), with learned
+augmentation edging ahead once the generator is high-capacity and EMA-averaged; it is also
+the stronger \emph{enabler} for a plain CNN. The structural method trades $\sim$5.5~pp of
+accuracy for full interpretability and no deep learning.
 
 \begin{table}[t]
   \caption{All strategies on MNIST one-shot transfer from 17 templates.}
@@ -437,7 +443,7 @@ learning.
     Strategy & Best model & Acc.\,(\%) \\
     \midrule
     Hand-crafted aug. & Proto embedding        & $77.46 \pm 2.39$ \\
-    Learned aug.\ (DDPM) & Proto embedding      & $76.57 \pm 1.49$ \\
+    Learned aug.\ (DDPM) & Proto embedding      & $\mathbf{78.50 \pm 1.76}$ \\
     Structural        & Random forest          & $71.98$ \\
     Nearest-template  & L2                      & $38.60$ \\
     \midrule
@@ -486,9 +492,10 @@ regardless of augmentation or model complexity.
 \textbf{The augmentation \emph{process} is the dominant lever.}
 Across all three strategies, the largest gains come from how training data is
 generated rather than from the choice of classifier.
-Learned diffusion augmentation matches hand-crafted augmentation without any
-domain-specific design, and even the learning-free structural method becomes competitive
-only once its reference bank is populated from augmented and generated images.
+Learned diffusion augmentation matches—and, at full quality, slightly exceeds—hand-crafted
+augmentation without any domain-specific design, and even the learning-free structural
+method becomes competitive only once its reference bank is populated from augmented and
+generated images.
 This supports a data-centric reading of one-shot recognition: with a small, well-chosen
 template set, investment in the augmentation process pays off more than investment in model
 capacity.

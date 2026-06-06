@@ -28,12 +28,11 @@ from src.variants17.label_schema import LABELS_17
 NUM_CLASSES = 17
 
 
-def build_model(dim: int = 32, timesteps: int = 1000) -> ConditionalGaussianDiffusion:
+def build_model(dim: int = 32, timesteps: int = 1000, sampling_steps: int = 100) -> ConditionalGaussianDiffusion:
     unet = Unet(dim=dim, channels=1, dim_mults=(1, 2, 4))
-    sampling_timesteps = min(100, timesteps)
     return ConditionalGaussianDiffusion(
         unet, num_classes=NUM_CLASSES, image_size=28,
-        timesteps=timesteps, sampling_timesteps=sampling_timesteps,
+        timesteps=timesteps, sampling_timesteps=min(sampling_steps, timesteps),
     )
 
 
@@ -42,7 +41,7 @@ def main(args):
     print(f"[gen] device={device}  n_per_class={args.n_per_class}")
 
     ckpt_path = os.path.join(ROOT, args.checkpoint) if not os.path.isabs(args.checkpoint) else args.checkpoint
-    model = build_model(dim=args.dim, timesteps=args.timesteps).to(device)
+    model = build_model(dim=args.dim, timesteps=args.timesteps, sampling_steps=args.sampling_steps).to(device)
     model.load(ckpt_path, device)
     model.eval()
     print(f"[gen] loaded {ckpt_path}")
@@ -86,7 +85,8 @@ if __name__ == "__main__":
     p.add_argument("--checkpoint",  default="experiments/checkpoints/diffusion/phase2_final.pt")
     p.add_argument("--n-per-class", type=int,   default=256)
     p.add_argument("--batch-size",  type=int,   default=64)
-    p.add_argument("--dim",         type=int,   default=32)
-    p.add_argument("--timesteps",   type=int,   default=1000)
+    p.add_argument("--dim",            type=int, default=32)
+    p.add_argument("--timesteps",      type=int, default=1000)
+    p.add_argument("--sampling-steps", type=int, default=100, help="DDIM steps at generation")
     p.add_argument("--out-dir",     default="experiments/checkpoints/diffusion_aug")
     main(p.parse_args())

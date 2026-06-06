@@ -46,7 +46,18 @@ def build_model(num_classes: int, dim: int = 32, timesteps: int = 1000) -> Condi
     )
 
 
-def train_one_epoch(model, loader, opt, device, scaler=None):
+@torch.no_grad()
+def _ema_update(ema_state, model, decay):
+    """In-place EMA: ema = decay*ema + (1-decay)*param, for every state-dict tensor."""
+    for k, v in model.state_dict().items():
+        e = ema_state[k]
+        if v.dtype.is_floating_point:
+            e.mul_(decay).add_(v.detach(), alpha=1.0 - decay)
+        else:
+            e.copy_(v)  # buffers like num_batches_tracked: just track
+
+
+def train_one_epoch(model, loader, opt, device, scaler=None, ema_state=None, ema_decay=0.999):
     model.train()
     total = 0.0
     for imgs, classes in loader:
@@ -62,6 +73,8 @@ def train_one_epoch(model, loader, opt, device, scaler=None):
             loss = model(imgs, classes)
             loss.backward()
             opt.step()
+        if ema_state is not None:
+            _ema_update(ema_state, model, ema_decay)
         total += loss.item()
     return total / max(len(loader), 1)
 
@@ -118,12 +131,25 @@ def main(args):
     # (GTX 16xx) and produces NaN loss. Default to fp32 on GPU.
     scaler = torch.amp.GradScaler() if (device.type == "cuda" and args.amp) else None
 
+    # EMA of weights — the standard diffusion quality trick. The EMA shadow is what
+    # we save (generation samples from the smoothed weights).
+    ema_state = None
+    if args.ema_decay > 0:
+        ema_state = {k: v.detach().clone() for k, v in model.state_dict().items()}
+        print(f"[diffusion] EMA enabled (decay={args.ema_decay})")
+
+    def _save(path):
+        if ema_state is not None:
+            torch.save(ema_state, path)   # save smoothed weights
+        else:
+            model.save(path)
+
     # ----------------------------------------------------------------- train
     import time
     t_start = time.perf_counter()
 
     for epoch in range(1, args.epochs + 1):
-        loss = train_one_epoch(model, loader, opt, device, scaler)
+        loss = train_one_epoch(model, loader, opt, device, scaler, ema_state, args.ema_decay)
         elapsed = time.perf_counter() - t_start
         remaining = elapsed / epoch * (args.epochs - epoch)
         print(
@@ -134,11 +160,11 @@ def main(args):
 
         if epoch % args.save_every == 0:
             ckpt = os.path.join(ckpt_dir, f"phase{args.phase}_epoch{epoch:04d}.pt")
-            model.save(ckpt)
+            _save(ckpt)
             print(f"[diffusion] saved {ckpt}", flush=True)
 
     final = os.path.join(ckpt_dir, f"phase{args.phase}_final.pt")
-    model.save(final)
+    _save(final)
     print(f"[diffusion] final checkpoint: {final}")
 
 
@@ -153,6 +179,8 @@ if __name__ == "__main__":
     p.add_argument("--save-every",    type=int,   default=50)
     p.add_argument("--amp", action="store_true",
                    help="Enable fp16 mixed precision (unstable on GTX 16xx; off by default)")
+    p.add_argument("--ema-decay", type=float, default=0.999,
+                   help="EMA decay for weight averaging (0 disables; saved ckpt is the EMA)")
     p.add_argument("--resume",        type=str,   default="",   help="Checkpoint path to resume from")
     p.add_argument("--max-per-class", type=int,   default=5000, help="Phase 1: max MNIST images per class")
     p.add_argument("--aug-images",    type=str,
