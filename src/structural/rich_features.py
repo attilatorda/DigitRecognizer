@@ -11,7 +11,17 @@ reducing to {2 endpoints, 1 bent edge}):
   - endpoint vertical profile(3)  fraction of endpoints in top/mid/bottom third
   - loop position            (2)  loop present in top half / bottom half
 
-Total continuous block = 28 dims. Concatenated with the 60-dim bag -> 88-dim vector.
+Total continuous block = 28 dims.
+
+v3 directional block (5 dims) — the *signed* curvature profile of the longest stroke,
+which separates open single-stroke digits that share the same unsigned descriptors
+(a 2 curves right-then-left, a 3 right-then-right, a 7 straight-then-sharp):
+
+  - signed turn in stroke thirds (3)  net left/right bend in each third of the main stroke
+  - net signed curvature        (1)  overall handedness across all edges
+  - peak-curvature height       (1)  vertical position of the sharpest bend
+
+Concatenated as [bag(60), cont(28), dir(5)] -> 93-dim vector.
 """
 
 import numpy as np
@@ -19,7 +29,7 @@ from .skeleton_graph import build_graph, bounding_box_diagonal, edge_length
 from .feature_extractor import extract_features
 from .bag_of_features import vectorize, VOCAB_DIM
 
-RICH_DIM = VOCAB_DIM + 28  # 60 + 28 = 88
+RICH_DIM = VOCAB_DIM + 28 + 5  # 60 + 28 + 5 = 93
 
 
 def _edge_orientation_deg(pixels) -> float:
@@ -74,8 +84,44 @@ def _total_turn(pixels) -> float:
     return total
 
 
+def _signed_turns(pixels):
+    """Signed turn angle (deg, +left/-right) at each interior vertex of a path."""
+    out = []
+    for i in range(1, len(pixels) - 1):
+        d1r, d1c = pixels[i][0] - pixels[i-1][0], pixels[i][1] - pixels[i-1][1]
+        d2r, d2c = pixels[i+1][0] - pixels[i][0], pixels[i+1][1] - pixels[i][1]
+        cross = d1r * d2c - d1c * d2r
+        dot = d1r * d2r + d1c * d2c
+        out.append(np.degrees(np.arctan2(cross, dot)))
+    return out
+
+
+def _directional_block(edges, rmin, h):
+    """5-dim signed-curvature descriptor of the longest stroke (see module docstring)."""
+    dir5 = np.zeros(5, dtype=np.float32)
+    if not edges:
+        return dir5
+    longest = max(edges, key=lambda e: edge_length(e['pixels']))
+    px = longest['pixels']
+    turns = _signed_turns(px)
+    if turns:
+        # [0:3] net signed bend in each third of the main stroke (normalised by 180)
+        k = len(turns)
+        for j in range(3):
+            seg = turns[j * k // 3:(j + 1) * k // 3]
+            if seg:
+                dir5[j] = float(np.clip(np.sum(seg) / 180.0, -1.0, 1.0))
+        # [4] vertical position of the sharpest bend along the stroke
+        peak = int(np.argmax(np.abs(turns)))
+        dir5[4] = (px[peak + 1][0] - rmin) / max(h, 1.0)
+    # [3] net handedness across all edges
+    net = sum(np.sum(_signed_turns(e['pixels'])) for e in edges)
+    dir5[3] = float(np.clip(net / 360.0, -1.0, 1.0))
+    return dir5
+
+
 def extract_rich_vector(skeleton_u8: np.ndarray) -> np.ndarray:
-    """Return an 88-dim float32 feature vector for one skeleton image."""
+    """Return a 93-dim float32 feature vector for one skeleton image."""
     bag = vectorize(extract_features(skeleton_u8))  # 60-dim
 
     graph = build_graph(skeleton_u8)
@@ -85,7 +131,7 @@ def extract_rich_vector(skeleton_u8: np.ndarray) -> np.ndarray:
     rows, cols = np.where(skeleton_u8 > 0)
     cont = np.zeros(28, dtype=np.float32)
     if len(rows) == 0:
-        return np.concatenate([bag, cont]).astype(np.float32)
+        return np.concatenate([bag, cont, np.zeros(5, dtype=np.float32)]).astype(np.float32)
 
     rmin, rmax = rows.min(), rows.max()
     cmin, cmax = cols.min(), cols.max()
@@ -149,4 +195,7 @@ def extract_rich_vector(skeleton_u8: np.ndarray) -> np.ndarray:
     cont[26] = 1.0 if any(r < mid for r in loop_rows) else 0.0
     cont[27] = 1.0 if any(r >= mid for r in loop_rows) else 0.0
 
-    return np.concatenate([bag, cont]).astype(np.float32)
+    # v3 directional block (signed curvature of the longest stroke)
+    dir5 = _directional_block(edges, rmin, h)
+
+    return np.concatenate([bag, cont, dir5]).astype(np.float32)

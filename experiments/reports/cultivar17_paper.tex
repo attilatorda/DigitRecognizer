@@ -57,7 +57,7 @@ examples—78\% of supervised CNN performance.
 to synthesise training images lifts a plain CNN by over 20~percentage points and, at full
 capacity, statistically matches the hand-crafted pipeline ($76.57 \pm 1.49\%$).
 (iii)~\emph{Structural recognition}: an interpretable bag of skeleton-graph features with a
-tree classifier reaches $68.0\%$ with no deep learning.
+tree classifier reaches $72.0\%$ with no deep learning.
 Together these show that, given a culturally-grounded template set, the augmentation
 \emph{process}—not just model capacity—is the dominant lever in one-shot digit recognition.
 All code and data are publicly available for reproducibility.
@@ -92,7 +92,7 @@ Our contributions are:
         \cite{Ho2020} that synthesises training data, lifting a plain CNN by $+20$~pp and,
         at full capacity, matching the hand-crafted pipeline.
   \item \textbf{Structural recognition}—an interpretable bag of skeleton-graph features
-        classified by a random forest \cite{Breiman2001}, reaching $68.0\%$ with no deep
+        classified by a random forest \cite{Breiman2001}, reaching $72.0\%$ with no deep
         learning.
   \item \textbf{A unified comparison} of all three strategies against nearest-template and
         supervised references on a common benchmark.
@@ -251,9 +251,11 @@ geometric primitives.
 Each image is skeletonised (Zhang--Suen) and converted to a graph whose nodes are stroke
 endpoints, junctions, and loops, and whose edges are traced paths typed as straight, curved,
 or bent.
-From this graph we build an 88-dimensional descriptor: a bag of (level, type, size)
+From this graph we build a 93-dimensional descriptor: a bag of (level, type, size)
 primitive counts augmented with an edge-orientation histogram, curvature and inflection
-statistics, bounding-box geometry, and endpoint/loop spatial profiles.
+statistics, bounding-box geometry, endpoint/loop spatial profiles, and a
+\emph{signed}-curvature profile of the longest stroke (its left/right bend in thirds) that
+separates open single-stroke digits sharing the same unsigned primitives.
 Descriptors are extracted from the same augmented template bank and from the diffusion-%
 generated images (8{,}704 reference vectors total), and a classifier (we compare
 $k$-NN, logistic regression, gradient boosting, an MLP, and a random forest
@@ -387,13 +389,14 @@ distortion is counterproductive.
 
 Table~\ref{tab:structural} reports the structural pipeline across classifiers.
 With explicit skeleton-graph features and no learned representation, a random forest reaches
-$68.0\%$—roughly $7\times$ the 10\% chance rate and within $\sim$9~pp of the neural
+$72.0\%$—roughly $7\times$ the 10\% chance rate and within $\sim$5.5~pp of the neural
 baseline.
-The reference bank is the dominant lever: moving from 1-NN against the 17 raw templates
-($35.8\%$) to a classifier over 8{,}704 descriptors from augmented and generated images
-nearly doubles accuracy.
-The remaining gap to the neural pipelines reflects the descriptor's coarseness on open
-single-stroke digits (1, 2, 3, 5, 7), which share similar primitive sets.
+Two levers drive this. First, the reference bank: moving from 1-NN against the 17 raw
+templates ($35.8\%$) to a classifier over 8{,}704 descriptors from augmented and generated
+images nearly doubles accuracy.
+Second, the \emph{signed}-curvature descriptor: adding it ($88\to93$ dims) lifts every
+classifier by 4--6~pp by separating open single-stroke digits (1, 2, 3, 5, 7) that share the
+same unsigned primitive sets—e.g.\ a 2 bends right-then-left where a 3 bends right-then-right.
 
 \begin{table}[t]
   \caption{Structural bag-of-features across classifiers (MNIST 10K, 88-dim, 8{,}704-image
@@ -404,12 +407,12 @@ single-stroke digits (1, 2, 3, 5, 7), which share similar primitive sets.
     \toprule
     Classifier & Acc.\,(\%) \\
     \midrule
-    \textbf{Random forest}     & $\mathbf{68.01}$ \\
-    Soft-voting ensemble       & $66.77$ \\
-    Gradient boosting          & $65.99$ \\
-    $k$-NN ($k{=}5$)           & $65.14$ \\
-    Logistic regression        & $63.12$ \\
-    MLP                        & $62.19$ \\
+    \textbf{Random forest}     & $\mathbf{71.98}$ \\
+    Soft-voting ensemble       & $71.30$ \\
+    $k$-NN ($k{=}5$)           & $70.26$ \\
+    Gradient boosting          & $69.50$ \\
+    Logistic regression        & $67.62$ \\
+    MLP                        & $66.33$ \\
     \midrule
     1-NN, 17 raw templates     & $35.81$ \\
     \bottomrule
@@ -422,7 +425,7 @@ single-stroke digits (1, 2, 3, 5, 7), which share similar primitive sets.
 Table~\ref{tab:unified} places all three strategies on a common scale.
 The two neural augmentation strategies are statistically indistinguishable at the top
 ($\sim$77\%); learned augmentation is the stronger \emph{enabler} for a plain CNN, while the
-structural method trades $\sim$9~pp of accuracy for full interpretability and no deep
+structural method trades $\sim$5.5~pp of accuracy for full interpretability and no deep
 learning.
 
 \begin{table}[t]
@@ -435,7 +438,7 @@ learning.
     \midrule
     Hand-crafted aug. & Proto embedding        & $77.46 \pm 2.39$ \\
     Learned aug.\ (DDPM) & Proto embedding      & $76.57 \pm 1.49$ \\
-    Structural        & Random forest          & $68.01$ \\
+    Structural        & Random forest          & $71.98$ \\
     Nearest-template  & L2                      & $38.60$ \\
     \midrule
     Supervised (ref.) & CNN, 60k labels         & $99.11$ \\

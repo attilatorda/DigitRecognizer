@@ -110,6 +110,28 @@ strong showing for a hand-engineered method, but a clear ceiling ~9pp below lear
 features. Further gains would require either much richer descriptors or a structural+CNN
 hybrid (crosses into Track 4/5 territory).
 
+## v3+dir — signed-curvature directional features
+
+The remaining bottleneck (open single-stroke digits 1/2/3/5/7 sharing descriptors) was
+addressed by adding a 5-dim *signed*-curvature block to the descriptor (88 → 93 dims): the
+longest stroke's net left/right bend in each of three thirds, overall handedness, and the
+vertical height of the sharpest bend. This distinguishes a "2" (curves right-then-left) from
+a "3" (right-then-right) from a "7" (straight-then-sharp) — which unsigned curvature
+magnitude cannot.
+
+| Classifier | 88-dim | **93-dim (+dir)** |
+|------------|-------:|------------------:|
+| **Random forest** | 68.01% | **71.98%** |
+| kNN (k=5) | 65.14% | 70.26% |
+| Soft-voting ensemble | 66.77% | 71.30% |
+| HistGradientBoosting | 65.99% | 69.50% |
+| Logistic regression | 63.12% | 67.62% |
+| MLP | 62.19% | 66.33% |
+
+Every classifier improved by 4–6pp, confirming that signed curvature was the missing
+signal. **Track 6 full arc: 35.81 → 65.43 → 68.01 → 71.98%**, now only −5.48pp from the
+77.46% CNN baseline — a fully interpretable, no-deep-learning method.
+
 ## Next steps (milestone)
 
 To make Track 6 competitive, L2 edge descriptors need to be richer:
