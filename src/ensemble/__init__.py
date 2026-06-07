@@ -7,5 +7,11 @@ how few labels are needed.
 """
 
 from .stacking import StackingEnsemble
+from .members import CNNMember, FusionCNNMember, StructuralRFMember, train_cnn
+from .exemplar import prototypicality_scores, select_top_k_per_class
 
-__all__ = ["StackingEnsemble"]
+__all__ = [
+    "StackingEnsemble",
+    "CNNMember", "FusionCNNMember", "StructuralRFMember", "train_cnn",
+    "prototypicality_scores", "select_top_k_per_class",
+]

@@ -15,11 +15,11 @@ extraction.
 | 4 | **Variants17** | `src/variants17` | One-shot 17-class style-aware learning from 17 templates |
 | 5 | **Diffusion** | `src/diffusion` | Class-conditional DDPM generates training data |
 | 6 | **Structural** | `src/structural` | Bag-of-features from a skeleton graph (no learning) |
-| 7 | **Ensemble** | `src/ensemble` | Semi-supervised stacking of Tracks 4–6 (*not* one-shot) |
+| 7 | **Combined** | `src/ensemble` | Best-of-everything supervised system + exemplar selection (*not* one-shot) |
 
 Tracks 1–6 are supervised or one-shot; **Track 7 deliberately steps outside one-shot** —
-it treats the one-shot recognisers as fixed feature extractors and trains a meta-classifier
-on a small labeled set. Future tracks may likewise relax the one-shot constraint.
+it fuses the strongest pieces of the prior tracks on MNIST training data and studies label
+efficiency + which training examples matter. Future tracks may likewise relax one-shot.
 
 ---
 
@@ -75,25 +75,34 @@ within ~5.5pp of the CNN baseline. The reference bank was the dominant lever (17
 reference vectors); signed-curvature descriptors added ~4pp by separating open single-stroke
 digits (1/2/3/5/7). A fully interpretable, no-deep-learning method.
 
-### Semi-supervised — Track 7 (stacking, *not* one-shot)
+### Supervised — Track 7 (combined system + exemplar selection, *not* one-shot)
 
-The three one-shot recognisers (Tracks 4–6) are diverse (a 91% oracle ceiling — at least
-one is right on 91% of images). Stacking them as fixed feature extractors under a small
-labeled budget is dramatically label-efficient:
+Track 7 fuses the strongest pieces of the prior tracks on the MNIST **training** set —
+**CNN (raw)** + **Fusion CNN (raw + Guo-Hall "thin" skeleton)** + **structural RF (93-dim)** —
+stacked by a meta-classifier, plus an **exemplar selector** that finds the examples that
+"fit a class strongest". Shown in the low-label regime (at 60k a plain CNN is already ~99%):
 
-| Labeled MNIST images | Stacked members (30-dim) | Raw pixels (784-dim) |
-|---------------------:|-------------------------:|---------------------:|
-| 50 (5/digit) | **86.6%** | 69.6% |
-| 100 | 87.3% | 76.1% |
-| 500 | 90.1% | 85.5% |
-| 5000 (peak, histgb) | **96.6%** | 90.0% |
+| Budget n | Best single member | **Combined (stacked)** | gain |
+|---------:|-------------------:|-----------------------:|-----:|
+| 250 | 82.1% (RF) | **85.5%** | +3.4 |
+| 500 | 85.5% (RF) | **91.1%** | +5.6 |
+| 1000 | 87.4% (RF) | **92.8%** | +5.4 |
+| 5000 | 95.5% (CNN) | **96.9%** | +1.4 |
 
-**Track 7 finding:** the one-shot recognisers form a representation that reaches **86.6%
-from just 50 labels** — +17pp over raw pixels at the same budget — and 96.6% with 5k labels.
-Equally important is the *boundary* finding: in the one-shot regime itself, a label-free
-ensemble adds only +1.5pp (soft-average) over the best single member; the large diversity is
-only unlockable with supervision, at which point the task is no longer one-shot. See
-`experiments/reports/ensemble_findings.md` and `fig5_label_efficiency.png`.
+**Track 7 findings:**
+1. **Combining helps most when labels are scarce.** The structural RF is far more
+   label-efficient than the CNN (75.9% vs 52.6% at n=100); the CNN overtakes by n≈2500; the
+   stack exploits both and leads by +3–5.6pp at n=250–1000, narrowing as the CNN saturates.
+2. **The "strongest-fitting" examples are the *worst* training coreset.** Selecting the most
+   prototypical examples (highest confidence + closest to the class centroid) *underperforms
+   random* at every budget (n=1000: 80.8% vs 92.8%) and plateaus early — they are easy,
+   central, redundant, with no decision-boundary coverage. Their value is *representing* a
+   class / seeding generation (the deferred diffusion step), not training. Hard/atypical
+   examples are the opposite: catastrophic at tiny n (noise) but best at large n (97.4% @ 5k).
+
+See `fig6_combined_efficiency.png`, `combined_track_results.json`. The earlier
+semi-supervised stacking of the one-shot recognisers (86.6% from 50 labels, +17pp over raw
+pixels; `ensemble_findings.md`, `fig5_label_efficiency.png`) is a precursor of this track.
 
 ---
 
@@ -146,11 +155,12 @@ python scripts/run_structural_experiment.py            # full 10K test (~10s)
 python scripts/run_structural_experiment.py --smoke    # 100-image quick check
 ```
 
-### Track 7 — Semi-supervised stacking ensemble
+### Track 7 — Combined supervised system + exemplar selection
 ```bash
-python scripts/build_member_predictions.py   # seed-ensemble members -> member_probs.npz
-python scripts/run_ensemble_track.py          # label-efficiency curve + figure
-# (diagnostics: analyze_ensemble_potential.py, run_stacking_ensemble.py)
+python scripts/run_combined_track.py          # data-efficiency curve + exemplar study + figure
+python scripts/run_combined_track.py --smoke  # quick
+# precursor (semi-supervised stacking of one-shot members):
+python scripts/build_member_predictions.py && python scripts/run_ensemble_track.py
 ```
 
 ### Interactive browser
