@@ -1,0 +1,18 @@
+{
+  "eval": "held-out 50% of MNIST test (5000 images)",
+  "per_member": {
+    "morph_proto": 0.7776,
+    "ddpm_proto": 0.8128,
+    "struct_rf": 0.7368
+  },
+  "one_shot_valid": {
+    "best_single_member": 0.8128,
+    "label_free_soft_average": 0.828
+  },
+  "NOT_one_shot_supervised_reference": {
+    "note": "meta-classifier trained on 5000 labeled MNIST images; exits one-shot",
+    "stacking_logreg": 0.9278,
+    "stacking_histgb": 0.9656
+  },
+  "argmax_oracle_ceiling": 0.911
+}
