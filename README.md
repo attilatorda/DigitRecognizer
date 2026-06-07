@@ -15,6 +15,11 @@ extraction.
 | 4 | **Variants17** | `src/variants17` | One-shot 17-class style-aware learning from 17 templates |
 | 5 | **Diffusion** | `src/diffusion` | Class-conditional DDPM generates training data |
 | 6 | **Structural** | `src/structural` | Bag-of-features from a skeleton graph (no learning) |
+| 7 | **Ensemble** | `src/ensemble` | Semi-supervised stacking of Tracks 4–6 (*not* one-shot) |
+
+Tracks 1–6 are supervised or one-shot; **Track 7 deliberately steps outside one-shot** —
+it treats the one-shot recognisers as fixed feature extractors and trains a meta-classifier
+on a small labeled set. Future tracks may likewise relax the one-shot constraint.
 
 ---
 
@@ -70,6 +75,26 @@ within ~5.5pp of the CNN baseline. The reference bank was the dominant lever (17
 reference vectors); signed-curvature descriptors added ~4pp by separating open single-stroke
 digits (1/2/3/5/7). A fully interpretable, no-deep-learning method.
 
+### Semi-supervised — Track 7 (stacking, *not* one-shot)
+
+The three one-shot recognisers (Tracks 4–6) are diverse (a 91% oracle ceiling — at least
+one is right on 91% of images). Stacking them as fixed feature extractors under a small
+labeled budget is dramatically label-efficient:
+
+| Labeled MNIST images | Stacked members (30-dim) | Raw pixels (784-dim) |
+|---------------------:|-------------------------:|---------------------:|
+| 50 (5/digit) | **86.6%** | 69.6% |
+| 100 | 87.3% | 76.1% |
+| 500 | 90.1% | 85.5% |
+| 5000 (peak, histgb) | **96.6%** | 90.0% |
+
+**Track 7 finding:** the one-shot recognisers form a representation that reaches **86.6%
+from just 50 labels** — +17pp over raw pixels at the same budget — and 96.6% with 5k labels.
+Equally important is the *boundary* finding: in the one-shot regime itself, a label-free
+ensemble adds only +1.5pp (soft-average) over the best single member; the large diversity is
+only unlockable with supervision, at which point the task is no longer one-shot. See
+`experiments/reports/ensemble_findings.md` and `fig5_label_efficiency.png`.
+
 ---
 
 ## Install
@@ -119,6 +144,13 @@ python scripts/run_diffusion_experiment.py
 ```bash
 python scripts/run_structural_experiment.py            # full 10K test (~10s)
 python scripts/run_structural_experiment.py --smoke    # 100-image quick check
+```
+
+### Track 7 — Semi-supervised stacking ensemble
+```bash
+python scripts/build_member_predictions.py   # seed-ensemble members -> member_probs.npz
+python scripts/run_ensemble_track.py          # label-efficiency curve + figure
+# (diagnostics: analyze_ensemble_potential.py, run_stacking_ensemble.py)
 ```
 
 ### Interactive browser
