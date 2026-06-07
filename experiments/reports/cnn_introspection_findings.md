@@ -65,3 +65,18 @@ boundary focus and is expected to hurt for the same reason.
 Reproduce: `python scripts/probe_variant_recovery.py` (Finding 1),
 `python scripts/run_subclass_expansion.py` (Finding 2). Raw numbers:
 `subclass_expansion_results.json`.
+
+## Future ideas (not yet run)
+
+1. **Auxiliary sub-class head (most promising).** Multi-task CNN: shared backbone, a 10-way
+   main head trained on all data, plus a sub-class head (structure-defined variants) as a
+   regularising auxiliary loss `CE_10 + λ·CE_subclass`. Injects the variant signal without
+   fragmenting the main task — the route to a *positive* #2 result. Reuses
+   `assign_subclasses` (structural KMeans) from `run_subclass_expansion.py`.
+2. **Idea #2a — weight prototypical "basic truths" more in backprop.** Per-example loss
+   weights ∝ prototypicality (Track 7 `exemplar.py`). Expected to *hurt* (Track 7: prototypical
+   = easy/redundant/low boundary value); worth a quick confirmatory A/B and possibly the
+   *inverse* (up-weight hard/atypical examples).
+3. **Reconstruct, not just decode.** Visualise the variant axis (e.g. condition the Track 5
+   DDPM on the probe direction, or feature-vis the crossbar sub-axis) to *generate* the two
+   7-variants from the net — turning Finding 1 from "decodable" into "reconstructable".
