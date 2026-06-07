@@ -16,10 +16,12 @@ extraction.
 | 5 | **Diffusion** | `src/diffusion` | Class-conditional DDPM generates training data |
 | 6 | **Structural** | `src/structural` | Bag-of-features from a skeleton graph (no learning) |
 | 7 | **Combined** | `src/ensemble` | Best-of-everything supervised system + exemplar selection (*not* one-shot) |
+| 8 | **Introspection** | `scripts/probe_variant_recovery.py`, `run_subclass_expansion.py` | Extracting latent style-variant structure from CNNs |
 
-Tracks 1–6 are supervised or one-shot; **Track 7 deliberately steps outside one-shot** —
-it fuses the strongest pieces of the prior tracks on MNIST training data and studies label
-efficiency + which training examples matter. Future tracks may likewise relax one-shot.
+Tracks 1–6 are supervised or one-shot; **Tracks 7–8 deliberately step outside one-shot** —
+Track 7 fuses the strongest pieces of the prior tracks on MNIST training data; Track 8
+investigates whether a CNN's internal representation encodes unlabeled style variants and
+whether that can improve training.
 
 ---
 
@@ -103,6 +105,21 @@ stacked by a meta-classifier, plus an **exemplar selector** that finds the examp
 See `fig6_combined_efficiency.png`, `combined_track_results.json`. The earlier
 semi-supervised stacking of the one-shot recognisers (86.6% from 50 labels, +17pp over raw
 pixels; `ensemble_findings.md`, `fig5_label_efficiency.png`) is a precursor of this track.
+
+### Introspection — Track 8 (extracting latent variants from CNNs)
+
+Does a 10-class CNN encode style variants it was never trained on (crossed vs uncrossed 7)?
+
+**Finding 1 (justified):** yes — a linear probe recovers the crossed-7 variant from the CNN
+embedding at **83.8%** (base rate 57.3%, +26.5pp; beats the raw-pixel probe). The variant is
+a faint linear sub-axis, *not* found by embedding-KMeans (ARI 0.02) but cleanly recovered in
+the **structural-feature space** (ARI 0.83).
+
+**Finding 2 (falsified, with cause):** splitting digits into structure-defined sub-classes,
+expanding the head, and mapping back 17→10-style **hurts** low-label training (−12pp at n=100,
+shrinking to −0.2pp at n=5000) — hard relabeling fragments scarce data. The principled fix —
+an **auxiliary sub-class head** (multi-task, no fragmentation) — is the open direction. See
+`cnn_introspection_findings.md`.
 
 ---
 
