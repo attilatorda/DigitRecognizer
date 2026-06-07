@@ -105,7 +105,7 @@ one-time costs per method; subsequent runs are instantaneous.
 
 ### 2.5 Reproducibility
 
-All code lives in `src/novel_skeleton/` and `scripts/run_skeleton_experiment.py`.
+All code lives in `src/skeleton/` and `scripts/run_skeleton_experiment.py`.
 The full experiment can be reproduced with:
 
 ```
@@ -359,4 +359,4 @@ alongside the raw image.
 *Raw data: `experiments/reports/skeleton_comparison.json`*  
 *Experiment runner: `scripts/run_skeleton_experiment.py`*  
 *Model: `src/local_cnn/model.py` (SimpleCNN)*  
-*Skeletonization: `src/novel_skeleton/skeletonize.py`*
+*Skeletonization: `src/skeleton/skeletonize.py`*

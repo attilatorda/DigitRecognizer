@@ -18,7 +18,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from src.local_cnn.model import SimpleCNN
-from src.novel_skeleton.skeletonize import skeletonize_batch
+from src.skeleton.skeletonize import skeletonize_batch
 from src.structural.rich_features import extract_rich_vector, RICH_DIM
 
 

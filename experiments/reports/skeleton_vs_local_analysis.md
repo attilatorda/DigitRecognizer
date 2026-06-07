@@ -10,7 +10,7 @@ Date: 2026-05-22
 - Batch size: 128
 - LR: 0.001
 - Runs:
-  - Skeletonized input pipeline: `src.novel_skeleton.train_skeleton_cnn`
+  - Skeletonized input pipeline: `src.skeleton.train_skeleton_cnn`
   - Regular grayscale pipeline: `src.local_cnn.train_local_cnn`
 
 ## Results
@@ -60,7 +60,7 @@ Evaluate whether adding a Hough line-map channel to skeleton input improves test
 
 ### Implementation summary
 
-- Added optional 2-channel mode in `src.novel_skeleton.train_skeleton_cnn`:
+- Added optional 2-channel mode in `src.skeleton.train_skeleton_cnn`:
   - `channel_mode=skeleton` (baseline, 1 channel)
   - `channel_mode=skeleton_hough` (2 channels: `[skeleton, hough_line_map]`)
 - Added tunable Hough parameters:

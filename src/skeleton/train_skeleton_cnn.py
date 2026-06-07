@@ -15,8 +15,8 @@ if ROOT not in sys.path:
 from src.common.data_io import load_mnist_idx
 from src.common.utils import ensure_dir, set_seed
 from src.local_cnn.model import SimpleCNN
-from src.novel_skeleton.skeleton_cache import load_or_build
-from src.novel_skeleton.skeletonize import skeletonize_batch  # noqa: F401 — re-exported for callers
+from src.skeleton.skeleton_cache import load_or_build
+from src.skeleton.skeletonize import skeletonize_batch  # noqa: F401 — re-exported for callers
 
 
 def hough_line_map_uint8(

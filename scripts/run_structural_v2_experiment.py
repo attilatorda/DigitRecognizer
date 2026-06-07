@@ -30,7 +30,7 @@ from sklearn.preprocessing import StandardScaler
 
 from src.common.data_io import load_mnist_idx
 from src.common.utils import ensure_dir
-from src.novel_skeleton.skeletonize import zhang_suen_skeletonize_uint8
+from src.skeleton.skeletonize import zhang_suen_skeletonize_uint8
 from src.structural.rich_features import extract_rich_vector, RICH_DIM
 from src.variants17.label_schema import CLASS17_TO_DIGIT10
 

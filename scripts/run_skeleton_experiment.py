@@ -29,8 +29,8 @@ if ROOT not in sys.path:
 from src.common.data_io import load_mnist_idx
 from src.common.utils import ensure_dir, set_seed
 from src.local_cnn.model import SimpleCNN
-from src.novel_skeleton.skeleton_cache import load_or_build
-from src.novel_skeleton.train_skeleton_cnn import (
+from src.skeleton.skeleton_cache import load_or_build
+from src.skeleton.train_skeleton_cnn import (
     evaluate_detailed,
     to_loader as skeleton_to_loader,
 )

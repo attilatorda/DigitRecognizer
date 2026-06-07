@@ -25,7 +25,7 @@ This project was restructured from a single training script into a multi-track r
 - `src/baseline/`
   - `run_baseline.py` (baseline runner, aligned with local CNN pipeline)
 
-- `src/novel_skeleton/`
+- `src/skeleton/`
   - `skeletonize.py` (Zhang–Suen style thinning via `skimage.morphology.skeletonize`)
   - `train_skeleton_cnn.py` (CNN training on skeletonized images)
 
@@ -83,10 +83,10 @@ Expected artifact:
 
 - `experiments/checkpoints/local_cnn/best_local_cnn.pt`
 
-### Step 3 — Run novel skeleton CNN experiment
+### Step 3 — Run skeleton CNN experiment
 
 ```bash
-python -m src.novel_skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5 --batch-size 128 --lr 0.001
+python -m src.skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5 --batch-size 128 --lr 0.001
 ```
 
 Expected artifact:
@@ -98,7 +98,7 @@ Expected artifact:
 PowerShell example:
 
 ```powershell
-python -m src.novel_skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5 --batch-size 128 --lr 0.001 2>&1 | Tee-Object -FilePath experiments/logs/skeleton_run.log
+python -m src.skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5 --batch-size 128 --lr 0.001 2>&1 | Tee-Object -FilePath experiments/logs/skeleton_run.log
 python -m src.local_cnn.train_local_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/local_cnn --epochs 5 --batch-size 128 --lr 0.001 2>&1 | Tee-Object -FilePath experiments/logs/local_run.log
 ```
 

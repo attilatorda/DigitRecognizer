@@ -48,7 +48,7 @@
         <li><code>run_baseline.py</code> (baseline runner, aligned with local CNN pipeline)</li>
       </ul>
     </li>
-    <li><code>src/novel_skeleton/</code>
+    <li><code>src/skeleton/</code>
       <ul>
         <li><code>skeletonize.py</code> (Zhang–Suen style thinning via <code>skimage.morphology.skeletonize</code>)</li>
         <li><code>train_skeleton_cnn.py</code> (CNN training on skeletonized images)</li>
@@ -103,13 +103,13 @@
   <ul><li><code>experiments/checkpoints/local_cnn/best_local_cnn.pt</code></li></ul>
 
   <h3>Step 3 — Run novel skeleton CNN experiment</h3>
-  <pre><code>python -m src.novel_skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5 --batch-size 128 --lr 0.001</code></pre>
+  <pre><code>python -m src.skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5 --batch-size 128 --lr 0.001</code></pre>
   <p>Expected artifact:</p>
   <ul><li><code>experiments/checkpoints/skeleton/best_skeleton_cnn.pt</code></li></ul>
 
   <h3>Step 4 — (Optional) Save logs while running</h3>
   <p>PowerShell example:</p>
-  <pre><code>python -m src.novel_skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5 --batch-size 128 --lr 0.001 2&gt;&amp;1 | Tee-Object -FilePath experiments/logs/skeleton_run.log
+  <pre><code>python -m src.skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5 --batch-size 128 --lr 0.001 2&gt;&amp;1 | Tee-Object -FilePath experiments/logs/skeleton_run.log
 python -m src.local_cnn.train_local_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/local_cnn --epochs 5 --batch-size 128 --lr 0.001 2&gt;&amp;1 | Tee-Object -FilePath experiments/logs/local_run.log</code></pre>
 
   <h3>Step 5 — Compare results</h3>

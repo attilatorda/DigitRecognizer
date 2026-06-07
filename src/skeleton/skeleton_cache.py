@@ -3,7 +3,7 @@ import time
 
 import numpy as np
 
-from src.novel_skeleton.skeletonize import skeletonize_batch
+from src.skeleton.skeletonize import skeletonize_batch
 
 
 def load_or_build(

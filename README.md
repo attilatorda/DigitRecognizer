@@ -11,7 +11,7 @@ extraction.
 |---|-------|------|------|
 | 1 | **Baseline** | `src/baseline` | Quick reference supervised pipeline |
 | 2 | **Local CNN** | `src/local_cnn` | Primary supervised CNN (the accuracy ceiling) |
-| 3 | **Novel Skeleton CNN** | `src/novel_skeleton` | Zhang-Suen / Lee / Guo-Hall skeletonized inputs |
+| 3 | **Skeleton CNN** | `src/skeleton` | Zhang-Suen / Lee / Guo-Hall skeletonized inputs |
 | 4 | **Variants17** | `src/variants17` | One-shot 17-class style-aware learning from 17 templates |
 | 5 | **Diffusion** | `src/diffusion` | Class-conditional DDPM generates training data |
 | 6 | **Structural** | `src/structural` | Bag-of-features from a skeleton graph (no learning) |
@@ -143,7 +143,7 @@ python -m src.local_cnn.train_local_cnn --mnist-path mnist_data --out-dir experi
 
 ### Track 3 — Skeleton CNN
 ```bash
-python -m src.novel_skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5
+python -m src.skeleton.train_skeleton_cnn --mnist-path mnist_data --out-dir experiments/checkpoints/skeleton --epochs 5
 ```
 
 ### Track 4 — Variants17 one-shot (full comparison + ablation)
