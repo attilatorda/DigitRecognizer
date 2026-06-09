@@ -17,11 +17,16 @@ extraction.
 | 6 | **Structural** | `src/structural` | Bag-of-features from a skeleton graph (no learning) |
 | 7 | **Combined** | `src/ensemble` | Best-of-everything supervised system + exemplar selection (*not* one-shot) |
 | 8 | **Introspection** | `scripts/probe_variant_recovery.py`, `run_subclass_expansion.py` | Extracting latent style-variant structure from CNNs |
+| 9 | **Data Efficiency Benchmark (PROPOSED)** | `src/track9_benchmark` | **BestNet (SOTA CNN) vs. Heterogeneous Ensemble** on small training sets (100–10,000 labels) |
 
 Tracks 1–6 are supervised or one-shot; **Tracks 7–8 deliberately step outside one-shot** —
 Track 7 fuses the strongest pieces of the prior tracks on MNIST training data; Track 8
 investigates whether a CNN's internal representation encodes unlabeled style variants and
 whether that can improve training.
+**Track 9 (proposed)** extends the data‑efficiency analysis of Track 7 by comparing a
+modern SOTA CNN architecture against the best ensemble method, systematically varying the
+amount of labeled training data.
+
 
 ---
 
@@ -120,6 +125,46 @@ expanding the head, and mapping back 17→10-style **hurts** low-label training 
 shrinking to −0.2pp at n=5000) — hard relabeling fragments scarce data. The principled fix —
 an **auxiliary sub-class head** (multi-task, no fragmentation) — is the open direction. See
 `cnn_introspection_findings.md`.
+
+### Track 9 — Data Efficiency Benchmark (PROPOSED)
+
+> **Status:** Proposed — not yet implemented. This section describes the planned experiment.
+
+**Goal:** Compare a modern SOTA CNN (“BestNet”) against the best ensemble method from
+Track 7 (heterogeneous stacking) across a range of very small to moderate training set
+sizes. The central question: *At what data budget does a complex single CNN overtake a
+diverse ensemble, and how large is the ensemble’s advantage in the low‑data regime?*
+
+**Track 9A — BestNet (SOTA CNN):**  
+A concrete, reproducible architecture designed to achieve **≥99.585%** on the full MNIST
+test set (60k training) in ≤25 epochs. BestNet is a streamlined CNN with:
+- 2 convolutional layers (32 and 64 filters, 3×3, ReLU, BatchNorm, MaxPooling 2×2)
+- Dropout (0.25 after first pooling, 0.5 before the output layer)
+- 1 fully connected layer (128 units, ReLU)
+- Output softmax (10 classes)  
+Training: Adam (lr=0.001), categorical crossentropy, batch size 128, 25 epochs.
+
+**Track 9B — Heterogeneous Ensemble (derived from Track 7):**  
+A majority voting ensemble of three distinct CNN architectures, each with identical
+depth but different receptive fields:
+- **CNN 3x3:** two conv layers (32/64, 3×3 kernels)
+- **CNN 5x5:** two conv layers (32/64, 5×5 kernels, same padding)
+- **CNN 7x7:** two conv layers (32/64, 7×7 kernels, same padding)  
+All three have BatchNorm, MaxPooling (2×2), a 128 unit FC layer, and Dropout (same rates).
+No meta classifier stacking — simple vote to keep the comparison clean and avoid
+additional parameters that would favour the ensemble in the low data regime.
+
+**Experiment plan:**
+
+1. **Training sets:** For each size in `[100, 200, 500, 1000, 2000, 5000, 10000]`,
+   randomly sample the specified number of labeled MNIST training examples, **stratified**
+   by class (equal per class). Each size is evaluated with **5 different random seeds**.
+2. **Models:** Train BestNet (Track 9A) and the Heterogeneous Ensemble (Track 9B)
+   separately on each sampled training set.
+3. **Testing:** All models evaluated on the **full MNIST test set** (10,000 images) after
+   each training run.
+4. **Metrics:** Mean test accuracy ± standard deviation over 5 seeds. Also record
+   training time per model (CPU/GPU) and inference time.
 
 ---
 
