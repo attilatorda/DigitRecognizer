@@ -1,0 +1,12 @@
+Highlights — Pattern Recognition Letters
+CultiVar-17: Three Data-Centric Strategies for One-Shot Digit Recognition
+from a Culturally-Motivated Template Set
+
+(3–5 bullets, each ≤ 85 characters including spaces; paste into the
+submission system's "Highlights" field.)
+
+- Three augmentation strategies compared for one-shot digit recognition on MNIST.
+- A prototype model on augmented templates reaches 77.4% MNIST accuracy.
+- A class-conditional diffusion augmenter matches-to-exceeds it at 79.1%.
+- An interpretable skeleton-graph model reaches 72.3% with no deep learning.
+- The augmentation process, not model capacity, is the dominant lever.

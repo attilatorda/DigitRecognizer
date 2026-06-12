@@ -1,16 +1,14 @@
-\documentclass[conference]{IEEEtran}
+\documentclass[final,5p,times,twocolumn]{elsarticle}
 
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
-\usepackage{cite}
 \usepackage{amsmath,amssymb}
 \usepackage{graphicx}
 \usepackage{booktabs}
 \usepackage{xcolor}
-\usepackage{hyperref}
 \usepackage{microtype}
 \usepackage{pifont}
-
+\usepackage{hyperref}
 \hypersetup{hidelinks}
 
 \newcommand{\cmark}{\ding{51}}
@@ -20,28 +18,25 @@
 \hyphenation{CultiVar}
 
 % ---- TARGET VENUE ----
-% Primary:  ICFHR 2026 (International Conference on Frontiers in Handwriting
-%           Recognition) — 8-page IEEE two-column format, directly relevant to
-%           handwriting, cultural variants, and digit recognition.
-% Fallback: Data-Centric AI Workshop @ NeurIPS 2026 (4-6 pages, values
-%           reproducibility and dataset contributions).
+% Pattern Recognition Letters (Elsevier). Double-column elsarticle format;
+% 7-page limit including figures, tables, and references. Highlights (3-5
+% bullets, <=85 chars each) are supplied separately in
+% cultivar17_highlights.txt. Required declarations (CRediT, competing
+% interest, data availability, generative-AI) appear above the references.
 % ----------------------
+
+\journal{Pattern Recognition Letters}
 
 % ============================================================
 \begin{document}
 
-\title{CultiVar-17: Three Data-Centric Strategies for\\
-       One-Shot Digit Recognition from a\\
-       Culturally-Motivated Template Set}
+\begin{frontmatter}
 
-\author{%
-  \IEEEauthorblockN{Attila Torda}
-  \IEEEauthorblockA{%
-    \textit{Independent Researcher}
-  }
-}
+\title{CultiVar-17: Three Data-Centric Strategies for One-Shot Digit
+       Recognition from a Culturally-Motivated Template Set}
 
-\maketitle
+\author{Attila Torda}
+\affiliation{organization={Independent Researcher}}
 
 % ============================================================
 \begin{abstract}
@@ -67,10 +62,12 @@ to show that learned augmentation can match expert-crafted augmentation in that 
 All code and data are publicly available for reproducibility.
 \end{abstract}
 
-\begin{IEEEkeywords}
-one-shot learning, digit recognition, handwriting style, data augmentation, prototype
-networks, MNIST
-\end{IEEEkeywords}
+\begin{keyword}
+one-shot learning \sep digit recognition \sep handwriting style \sep
+data augmentation \sep prototype networks \sep MNIST
+\end{keyword}
+
+\end{frontmatter}
 
 % ============================================================
 \section{Introduction}
@@ -599,6 +596,7 @@ any augmentation changes.
 
 % ============================================================
 \section{Reproducibility}
+\label{sec:repro}
 
 Each strategy is reproducible with a single command:
 
@@ -664,7 +662,39 @@ available at \url{http://yann.lecun.com/exdb/mnist/}.
 \end{figure}
 
 % ============================================================
-\bibliographystyle{IEEEtran}
+\section*{CRediT authorship contribution statement}
+
+\textbf{Attila Torda:} Conceptualization, Methodology, Software,
+Investigation, Data curation, Writing -- original draft, Writing -- review
+\& editing, Visualization.
+
+% ============================================================
+\section*{Declaration of competing interest}
+
+The author declares that he has no known competing financial interests or
+personal relationships that could have appeared to influence the work
+reported in this paper.
+
+% ============================================================
+\section*{Data availability}
+
+All code, the CultiVar-17 template set, and the scripts required to reproduce
+every reported result are publicly available in the project repository (see
+Section~\ref{sec:repro}). MNIST is a publicly available benchmark dataset.
+
+% ============================================================
+% Per Elsevier policy this declaration must appear immediately above the
+% references and will be published with the article.
+\section*{Declaration of Generative AI and AI-assisted technologies in the writing process}
+
+During the preparation of this work the author used Claude (Anthropic) in
+order to assist with drafting and copy-editing the manuscript text and with
+organising the presentation of the experimental results. After using this
+tool, the author reviewed and edited the content as needed and takes full
+responsibility for the content of the publication.
+
+% ============================================================
+\bibliographystyle{elsarticle-num}
 \bibliography{cultivar17_refs}
 
 \end{document}
