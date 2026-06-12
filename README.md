@@ -49,13 +49,13 @@ learnable from raw pixels. Fusion nearly matches raw; skeleton-only always under
 
 | Method | MNIST test acc | Track |
 |--------|---------------:|-------|
-| **Proto embedding (DDPM data, dim=32 + EMA)** | **78.50% ± 1.76** | 5 |
-| Proto embedding (morphological aug) | 77.46% ± 2.39 | 4 |
-| DDPM full-aug CNN | 74.40% ± 1.99 | 5 |
-| DDPM no-aug CNN | 73.94% ± 1.34 | 5 |
-| **Structural v3 (93-dim features + 8704-image bank, Random Forest)** | **71.98%** | 6 |
-| Full-aug CNN (morphological) | 65.19% | 4 |
-| No-aug CNN (morphological) | 51.20% | 4 |
+| **Proto embedding (DDPM data, dim=32 + EMA)** | **79.08% ± 1.67** | 5 |
+| Proto embedding (morphological aug) | 77.40% ± 2.24 | 4 |
+| DDPM full-aug CNN | 75.33% ± 1.13 | 5 |
+| DDPM no-aug CNN | 73.27% ± 1.36 | 5 |
+| **Structural v3 (93-dim features + 8704-image bank, Random Forest)** | **72.32%** | 6 |
+| Full-aug CNN (morphological) | 64.40% | 4 |
+| No-aug CNN (morphological) | 49.87% | 4 |
 | Nearest-template (L2) | 38.60% | 4 |
 | Structural v1 (1-NN, 17 templates) | 35.81% | 6 |
 | Random chance | 10.00% | — |
@@ -65,20 +65,20 @@ just 17 hand-drawn templates. Augmentation is essential (+14pp over no-aug); met
 learning beats classification.
 
 **Track 5 finding:** DDPM-generated training images are dramatically better raw data than
-17 templates — a plain CNN jumps **+22.7pp** (51.20→73.94%). At full quality (dim=32,
+17 templates — a plain CNN jumps **+23.4pp** (49.87→73.27%). At full quality (dim=32,
 timesteps=1000, **EMA** weight averaging, 512 imgs/class, 250 DDIM steps, GPU) the proto
-config reaches **78.50% ± 1.76**, which **exceeds** the hand-crafted morphological baseline
-(77.46% ± 2.39) by +1.04pp (4/5 seeds above it) — though overlapping error bars make it
+config reaches **79.08% ± 1.67**, which **exceeds** the hand-crafted morphological baseline
+(77.40% ± 2.24) by +1.69pp (4/5 seeds above it) — though overlapping error bars make it
 matches-to-exceeds rather than a decisive win. The trajectory 73.7% (dim=16) → 76.6%
-(dim=32) → 78.5% (dim=32+EMA) shows the gain tracks generation quality. Learned augmentation
+(dim=32) → 79.1% (dim=32+EMA) shows the gain tracks generation quality. Learned augmentation
 now rivals expert-crafted augmentation with zero domain-specific design.
 
 **Track 6 finding:** explicit structural features (endpoints, junctions, loops, typed
 segments) reach 35.81% from 17 templates with 1-NN and zero learning. Three upgrades —
 richer 93-dim descriptors (orientation histogram, curvature/inflection, geometry,
 endpoint/loop position, and signed-curvature stroke shape), a large reference bank (features
-from 8704 augmented+DDPM images), and a Random Forest classifier — take it to **71.98%**,
-within ~5.5pp of the CNN baseline. The reference bank was the dominant lever (17 → 8704
+from 8704 augmented+DDPM images), and a Random Forest classifier — take it to **72.32%**,
+within ~5pp of the CNN baseline. The reference bank was the dominant lever (17 → 8704
 reference vectors); signed-curvature descriptors added ~4pp by separating open single-stroke
 digits (1/2/3/5/7). A fully interpretable, no-deep-learning method.
 

@@ -1,17 +1,17 @@
 {
   "bank": "both",
-  "n_reference": 8704,
+  "n_reference": 13056,
   "accuracies": {
-    "logreg": 0.6762,
-    "knn": 0.7026,
-    "rf": 0.7198,
+    "logreg": 0.6702,
+    "knn": 0.6847,
+    "rf": 0.7232,
     "histgb": 0.695,
-    "mlp": 0.6633,
-    "ensemble": 0.713
+    "mlp": 0.6499,
+    "ensemble": 0.707
   },
   "best": "rf",
-  "best_acc": 0.7198,
+  "best_acc": 0.7232,
   "v2_acc": 0.6543,
   "proto_baseline": 0.7746,
-  "elapsed_s": 145.99557989999448
+  "elapsed_s": 135.3235598
 }

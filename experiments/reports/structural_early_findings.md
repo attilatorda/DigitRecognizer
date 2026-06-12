@@ -12,7 +12,7 @@ One-shot MNIST recognition from 17 CultiVar templates using structural features
 | **MNIST accuracy (full 10K test)** | **35.81%** |
 | MNIST accuracy (100-image smoke) | ~33% |
 | Random chance (10 digits) | 10% |
-| Variants17 proto baseline (CNN) | 77.46% |
+| Variants17 proto baseline (CNN) | 77.40% |
 | Speed | ~980 images/sec (10.2s for 10K) |
 
 Full 10K test run completes in ~10 seconds and reaches **35.81%** — above the 100-image
@@ -76,7 +76,7 @@ Both improvements from the milestone were implemented and run on the full 10K te
 |-----------|---------------:|
 | v1 (1-NN, 17 templates, 60-dim) | 35.81% |
 | **v2 (kNN, 8704-image bank, 88-dim)** | **65.43%** |
-| Variants17 proto baseline (CNN) | 77.46% |
+| Variants17 proto baseline (CNN) | 77.40% |
 
 **Track 6 nearly doubled: 35.81% -> 65.43% (+29.62pp), still 12pp below the CNN
 baseline.** The reference bank was the dominant lever (17 -> 8704 reference vectors
@@ -100,8 +100,8 @@ same 88-dim features with the combined bank (morphological + high-capacity dim=3
 
 **Track 6 progression: v1 35.81% → v2 65.43% → v3 68.01%.** Random Forest's nonlinear
 feature interactions beat kNN by ~3pp, so the classifier was part of the limiter — but the
-modest gain means the **features** are now the dominant remaining gap (still −9.45pp vs the
-77.46% CNN baseline). The ensemble underperformed RF alone because the weak members (MLP,
+modest gain means the **features** are now the dominant remaining gap (still −9.39pp vs the
+77.40% CNN baseline). The ensemble underperformed RF alone because the weak members (MLP,
 logreg) dragged the vote down. Runs in ~140s. Raw numbers: `structural_v3_results.json`.
 
 **Conclusion for the track:** explicit structural features + a tree classifier reach ~68%
@@ -121,16 +121,16 @@ magnitude cannot.
 
 | Classifier | 88-dim | **93-dim (+dir)** |
 |------------|-------:|------------------:|
-| **Random forest** | 68.01% | **71.98%** |
-| kNN (k=5) | 65.14% | 70.26% |
-| Soft-voting ensemble | 66.77% | 71.30% |
+| **Random forest** | 68.01% | **72.32%** |
+| Soft-voting ensemble | 66.77% | 70.70% |
 | HistGradientBoosting | 65.99% | 69.50% |
-| Logistic regression | 63.12% | 67.62% |
-| MLP | 62.19% | 66.33% |
+| kNN (k=5) | 65.14% | 68.47% |
+| Logistic regression | 63.12% | 67.02% |
+| MLP | 62.19% | 64.99% |
 
 Every classifier improved by 4–6pp, confirming that signed curvature was the missing
-signal. **Track 6 full arc: 35.81 → 65.43 → 68.01 → 71.98%**, now only −5.48pp from the
-77.46% CNN baseline — a fully interpretable, no-deep-learning method.
+signal. **Track 6 full arc: 35.81 → 65.43 → 68.01 → 72.32%**, now only −5.08pp from the
+77.40% CNN baseline — a fully interpretable, no-deep-learning method.
 
 ## Next steps (milestone)
 

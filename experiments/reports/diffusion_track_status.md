@@ -15,15 +15,15 @@ fp32 — fp16/AMP produces NaN on Turing, opt-in via `--amp`).
 
 | Config | morphological | dim=16 | dim=32 | **dim=32 + EMA** |
 |--------|------:|------:|------:|------:|
-| no_aug CNN | 51.20% | 72.17% | 71.45% | 73.94% ± 1.34 |
-| full_aug CNN | 65.19% | 68.39% | 68.70% | 74.40% ± 1.99 |
-| proto embedding | 77.46% ± 2.39 | 73.70% | 76.57% | **78.50% ± 1.76** |
+| no_aug CNN | 49.87% | 72.17% | 71.45% | 73.27% ± 1.36 |
+| full_aug CNN | 64.40% | 68.39% | 68.70% | 75.33% ± 1.13 |
+| proto embedding | 77.40% ± 2.24 | 73.70% | 76.57% | **79.08% ± 1.67** |
 
-**The proto config reaches 78.50% — it exceeds the hand-crafted baseline (77.46%) by
-+1.04pp, with 4 of 5 seeds above it and tighter variance.** Error bars still overlap, so
-this is matches-to-exceeds rather than a decisive win. Trajectory 73.7 → 76.6 → 78.5%
+**The proto config reaches 79.08% — it exceeds the hand-crafted baseline (77.40%) by
++1.69pp, with 4 of 5 seeds above it and tighter variance.** Error bars still overlap, so
+this is matches-to-exceeds rather than a decisive win. Trajectory 73.7 → 76.6 → 79.1%
 tracks generation quality (EMA was the key lever). Also: stacking morphological aug on top
-no longer hurts (full 74.4% ≥ no-aug 73.9%) — clean EMA images tolerate mild extra
+no longer hurts (full 75.3% ≥ no-aug 73.3%) — clean EMA images tolerate mild extra
 distortion. Raw numbers in `diffusion_experiment_results.json`.
 
 How to reproduce the best result:

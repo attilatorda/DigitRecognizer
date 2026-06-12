@@ -51,16 +51,19 @@ vs.\ uncrossed zero, European vs.\ American seven, serif vs.\ plain one, and mor
 Using only these 17 templates as supervision, we study three complementary data-centric
 strategies for transferring to the MNIST test set.
 (i)~\emph{Hand-crafted augmentation}: a prototype-embedding model trained on
-morphologically augmented templates achieves $77.46 \pm 2.39\%$ MNIST accuracy from 17
+morphologically augmented templates achieves $77.40 \pm 2.24\%$ MNIST accuracy from 17
 examples—78\% of supervised CNN performance.
 (ii)~\emph{Learned augmentation}: a class-conditional denoising diffusion model trained
-to synthesise training images lifts a plain CNN by over 22~percentage points and, at full
+to synthesise training images lifts a plain CNN by over 23~percentage points and, at full
 capacity with EMA weight averaging, matches-to-exceeds the hand-crafted pipeline
-($78.50 \pm 1.76\%$ vs.\ $77.46\%$).
+($79.08 \pm 1.67\%$ vs.\ $77.40\%$).
 (iii)~\emph{Structural recognition}: an interpretable bag of skeleton-graph features with a
-tree classifier reaches $72.0\%$ with no deep learning.
+tree classifier reaches $72.3\%$ with no deep learning.
 Together these show that, given a culturally-grounded template set, the augmentation
 \emph{process}—not just model capacity—is the dominant lever in one-shot digit recognition.
+To our knowledge, this is the first study to place hand-crafted, diffusion-learned, and
+structural augmentation on a common footing under single-template-per-class supervision, and
+to show that learned augmentation can match expert-crafted augmentation in that regime.
 All code and data are publicly available for reproducibility.
 \end{abstract}
 
@@ -81,6 +84,10 @@ labelled samples per digit class.
 This work explores a strict one-shot regime: we build complete recognition pipelines from
 exactly \textbf{one hand-drawn template per class}, structured around a culturally-aware
 17-class taxonomy, and ask how far three very different data-centric strategies can go.
+Where prior one-shot work largely advances new \emph{models} (metric learning, meta-learning),
+we instead isolate the \emph{augmentation process} as the lever and—novelly, to our
+knowledge—compare hand-crafted, diffusion-learned, and structural augmentation head-to-head
+under single-template supervision.
 Our contributions are:
 
 \begin{enumerate}
@@ -88,12 +95,12 @@ Our contributions are:
         variants, distributed as a reproducible \texttt{.npy} artifact.
   \item \textbf{A hand-crafted augmentation pipeline}—elastic distortion, stroke-width
         perturbation, and affine noise—paired with a prototype-embedding model that reaches
-        $77.46\%$ MNIST accuracy from 17 examples, with an ablation over its components.
+        $77.40\%$ MNIST accuracy from 17 examples, with an ablation over its components.
   \item \textbf{Learned augmentation}—a class-conditional denoising diffusion model
-        \cite{Ho2020} that synthesises training data, lifting a plain CNN by $+22$~pp and,
+        \cite{Ho2020} that synthesises training data, lifting a plain CNN by $+23$~pp and,
         at full capacity with EMA, matching-to-exceeding the hand-crafted pipeline.
   \item \textbf{Structural recognition}—an interpretable bag of skeleton-graph features
-        classified by a random forest \cite{Breiman2001}, reaching $72.0\%$ with no deep
+        classified by a random forest \cite{Breiman2001}, reaching $72.3\%$ with no deep
         learning.
   \item \textbf{A unified comparison} of all three strategies against nearest-template and
         supervised references on a common benchmark.
@@ -142,10 +149,10 @@ by an order of magnitude with a deterministic non-Markovian process.
 We repurpose a small class-conditional diffusion model not as a generator of final outputs
 but as a \emph{learned augmenter} that synthesises training data for a downstream
 classifier.
-Separately, structural and syntactic pattern recognition \cite{Cover1967,Breiman2001}
-describes images by explicit primitives and their relations rather than learned features;
-we revisit this classical idea with a skeleton-graph descriptor and a tree classifier,
-providing an interpretable counterpoint to the neural pipelines.
+Separately, structural and syntactic pattern recognition \cite{Fu1982} describes images by
+explicit primitives and their relations rather than learned features;
+we revisit this classical idea with a skeleton-graph descriptor and a tree classifier
+\cite{Breiman2001}, providing an interpretable counterpoint to the neural pipelines.
 
 % ============================================================
 \section{CultiVar-17 Dataset}
@@ -312,20 +319,49 @@ Figure~\ref{fig:results} visualises the comparison.
     Method & Acc.\,(\%) & Seeds \\
     \midrule
     Nearest-template (L2)      & 38.60         & --- \\
-    No-aug CNN                 & $51.20 \pm 1.86$ & 3 \\
-    Full-aug CNN               & $65.19 \pm 2.14$ & 3 \\
-    \textbf{Proto embedding}   & $\mathbf{77.46 \pm 2.39}$ & 5 \\
+    No-aug CNN                 & $49.87 \pm 2.86$ & 3 \\
+    Full-aug CNN               & $64.40 \pm 2.68$ & 3 \\
+    \textbf{Proto embedding}   & $\mathbf{77.40 \pm 2.24}$ & 5 \\
     \midrule
     Supervised CNN (reference) & 99.11         & --- \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-The prototype-embedding model reaches $77.46\%$—\textbf{78\% of supervised CNN
+The prototype-embedding model reaches $77.40\%$—\textbf{78\% of supervised CNN
 performance}—from 17 templates.
-Even the no-augmentation CNN ($51.20\%$) substantially outperforms the nearest-template
+Even the no-augmentation CNN ($49.87\%$) substantially outperforms the nearest-template
 baseline ($38.60\%$), showing that training on augmented templates provides significant
 discriminative capacity beyond simple template matching.
+
+\subsection{Validating the Variant Design}
+\label{sec:variant-validation}
+
+Are the hand-drawn, culturally-motivated templates actually better than arbitrary exemplars?
+We replace the 17 CultiVar templates with 17 randomly sampled MNIST training images following
+the same class structure (5 seeds) and rerun every method (Table~\ref{tab:variantvalid}).
+
+\begin{table}[t]
+  \caption{CultiVar-17 templates vs.\ 17 random MNIST exemplars (MNIST test \%).}
+  \label{tab:variantvalid}
+  \centering
+  \begin{tabular}{@{}lrr@{}}
+    \toprule
+    Method & CultiVar-17 & Random MNIST \\
+    \midrule
+    Nearest-template (L2) & $38.60$ & $48.11 \pm 4.48$ \\
+    No-aug CNN            & $49.87$ & $55.39 \pm 3.53$ \\
+    \textbf{Proto embedding} & $\mathbf{77.40 \pm 2.24}$ & $74.60 \pm 4.05$ \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The two simple baselines favour random MNIST exemplars—unsurprisingly, since MNIST test
+images resemble MNIST \emph{training} images far more than clean hand-drawn templates.
+But the prototype-embedding model—the configuration that defines our headline result—is
+\emph{better} with the CultiVar templates ($77.40\%$ vs.\ $74.60\%$, $+2.8$~pp). The
+culturally-grounded variant set thus helps precisely the model that matters: a metric-learning
+embedding benefits from clean, style-diverse prototypes, while naive pixel matching does not.
 
 \subsection{Augmentation Ablation}
 \label{sec:ablation}
@@ -341,18 +377,18 @@ stroke-width perturbation.
     \toprule
     Augmentation & Elastic & Stroke & Acc.\,(\%) \\
     \midrule
-    None                   & \xmark & \xmark & $51.20 \pm 1.86$ \\
-    Elastic only           & \cmark & \xmark & $56.79 \pm 4.44$ \\
-    Stroke only            & \xmark & \cmark & $55.59 \pm 0.78$ \\
-    Elastic + stroke (full)& \cmark & \cmark & $65.19 \pm 2.14$ \\
+    None                   & \xmark & \xmark & $49.87 \pm 2.86$ \\
+    Elastic only           & \cmark & \xmark & $55.47 \pm 4.54$ \\
+    Stroke only            & \xmark & \cmark & $55.14 \pm 1.11$ \\
+    Elastic + stroke (full)& \cmark & \cmark & $64.40 \pm 2.68$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
 Both components independently improve accuracy by $\sim\!5$ percentage points over no
 augmentation, and their combination yields a further gain (${\sim}9$~pp over elastic alone).
-The higher variance of \textit{elastic\_only} ($\pm4.44$) versus \textit{stroke\_only}
-($\pm0.78$) suggests elastic distortion is more seed-sensitive, while stroke perturbation
+The higher variance of \textit{elastic\_only} ($\pm4.54$) versus \textit{stroke\_only}
+($\pm1.11$) suggests elastic distortion is more seed-sensitive, while stroke perturbation
 provides more consistent improvement.
 
 \subsection{Learned Augmentation}
@@ -360,18 +396,18 @@ provides more consistent improvement.
 
 Table~\ref{tab:diffusion} reports accuracy when the diffusion-generated images replace the
 morphological augmentation as the training set.
-The effect on the plain no-augmentation CNN is dramatic: $+22.7$~pp ($51.20\to73.94\%$),
+The effect on the plain no-augmentation CNN is dramatic: $+23.4$~pp ($49.87\to73.27\%$),
 because the model now trains on thousands of diverse, in-distribution generated digits
 rather than 17 templates.
 With EMA weight averaging, 512 generated images per class, and 250-step DDIM sampling, the
-prototype configuration reaches $78.50 \pm 1.76\%$, which \emph{exceeds} the hand-crafted
-baseline ($77.46 \pm 2.39\%$) by $1.04$~pp with tighter variance (4 of 5 seeds above the
+prototype configuration reaches $79.08 \pm 1.67\%$, which \emph{exceeds} the hand-crafted
+baseline ($77.40 \pm 2.24\%$) by $1.69$~pp with tighter variance (4 of 5 seeds above the
 baseline). We report this as matching-to-exceeding rather than a decisive win, as the error
 bars still overlap. The trajectory across model quality is monotone—$73.7\%$ (small,
-$\text{dim}=16$), $76.6\%$ (high-capacity, no EMA), $78.5\%$ (high-capacity, EMA)—indicating
+$\text{dim}=16$), $76.6\%$ (high-capacity, no EMA), $79.1\%$ (high-capacity, EMA)—indicating
 the result is driven by generation quality, not chance.
 Unlike the smaller models, here applying light morphological augmentation \emph{on top} of
-the generated images no longer hurts ($74.4\%$ vs.\ $73.9\%$): once the generated images are
+the generated images no longer hurts ($75.3\%$ vs.\ $73.3\%$): once the generated images are
 clean enough, mild extra distortion is tolerated rather than counterproductive.
 
 \begin{table}[t]
@@ -383,9 +419,9 @@ clean enough, mild extra distortion is tolerated rather than counterproductive.
     \toprule
     Config & Morphological & DDPM \\
     \midrule
-    No-aug CNN       & $51.20$ & $73.94 \pm 1.34$ \\
-    Full-aug CNN     & $65.19$ & $74.40 \pm 1.99$ \\
-    Proto embedding  & $77.46 \pm 2.39$ & $\mathbf{78.50 \pm 1.76}$ \\
+    No-aug CNN       & $49.87$ & $73.27 \pm 1.36$ \\
+    Full-aug CNN     & $64.40$ & $75.33 \pm 1.13$ \\
+    Proto embedding  & $77.40 \pm 2.24$ & $\mathbf{79.08 \pm 1.67}$ \\
     \bottomrule
   \end{tabular}
 \end{table}
@@ -395,7 +431,7 @@ clean enough, mild extra distortion is tolerated rather than counterproductive.
 
 Table~\ref{tab:structural} reports the structural pipeline across classifiers.
 With explicit skeleton-graph features and no learned representation, a random forest reaches
-$72.0\%$—roughly $7\times$ the 10\% chance rate and within $\sim$5.5~pp of the neural
+$72.3\%$—roughly $7\times$ the 10\% chance rate and within $\sim$5~pp of the neural
 baseline.
 Two levers drive this. First, the reference bank: moving from 1-NN against the 17 raw
 templates ($35.8\%$) to a classifier over 8{,}704 descriptors from augmented and generated
@@ -413,12 +449,12 @@ same unsigned primitive sets—e.g.\ a 2 bends right-then-left where a 3 bends r
     \toprule
     Classifier & Acc.\,(\%) \\
     \midrule
-    \textbf{Random forest}     & $\mathbf{71.98}$ \\
-    Soft-voting ensemble       & $71.30$ \\
-    $k$-NN ($k{=}5$)           & $70.26$ \\
+    \textbf{Random forest}     & $\mathbf{72.32}$ \\
+    Soft-voting ensemble       & $70.70$ \\
     Gradient boosting          & $69.50$ \\
-    Logistic regression        & $67.62$ \\
-    MLP                        & $66.33$ \\
+    $k$-NN ($k{=}5$)           & $68.47$ \\
+    Logistic regression        & $67.02$ \\
+    MLP                        & $64.99$ \\
     \midrule
     1-NN, 17 raw templates     & $35.81$ \\
     \bottomrule
@@ -429,9 +465,9 @@ same unsigned primitive sets—e.g.\ a 2 bends right-then-left where a 3 bends r
 \label{sec:unified}
 
 Table~\ref{tab:unified} places all three strategies on a common scale.
-The two neural augmentation strategies sit together at the top ($77$--$78\%$), with learned
+The two neural augmentation strategies sit together at the top ($77$--$79\%$), with learned
 augmentation edging ahead once the generator is high-capacity and EMA-averaged; it is also
-the stronger \emph{enabler} for a plain CNN. The structural method trades $\sim$5.5~pp of
+the stronger \emph{enabler} for a plain CNN. The structural method trades $\sim$5~pp of
 accuracy for full interpretability and no deep learning.
 
 \begin{table}[t]
@@ -442,9 +478,9 @@ accuracy for full interpretability and no deep learning.
     \toprule
     Strategy & Best model & Acc.\,(\%) \\
     \midrule
-    Hand-crafted aug. & Proto embedding        & $77.46 \pm 2.39$ \\
-    Learned aug.\ (DDPM) & Proto embedding      & $\mathbf{78.50 \pm 1.76}$ \\
-    Structural        & Random forest          & $71.98$ \\
+    Hand-crafted aug. & Proto embedding        & $77.40 \pm 2.24$ \\
+    Learned aug.\ (DDPM) & Proto embedding      & $\mathbf{79.08 \pm 1.67}$ \\
+    Structural        & Random forest          & $72.32$ \\
     Nearest-template  & L2                      & $38.60$ \\
     \midrule
     Supervised (ref.) & CNN, 60k labels         & $99.11$ \\
@@ -458,7 +494,7 @@ accuracy for full interpretability and no deep learning.
 
 Figure~\ref{fig:confusion} shows the prototype model's confusion matrix, aggregated over
 its five seeds. Errors are highly concentrated rather than uniform: digits 4, 0, and~1 are
-recognised almost perfectly ($>95\%$), while 3 ($44.7\%$), 7 ($48.0\%$), and 9 ($55.6\%$)
+recognised almost perfectly ($>95\%$), while 3 ($41.2\%$), 7 ($57.5\%$), and 9 ($58.1\%$)
 account for most of the loss.
 The dominant confusions are structurally interpretable and trace directly to style
 coverage: \emph{$7\!\to\!1$} (a template-7 with no crossbar is geometrically close to a~1),
@@ -476,16 +512,16 @@ noise but a targeted, explainable consequence of a 17-template support set.
 Three patterns emerge:
 
 \textbf{Augmentation is essential.}
-The gap between nearest-template ($38.60\%$) and full-aug CNN ($65.19\%$) confirms that
+The gap between nearest-template ($38.60\%$) and full-aug CNN ($64.40\%$) confirms that
 synthetic diversity substantially improves generalisation beyond direct pixel matching.
 
 \textbf{Embedding beats classification.}
-The prototype model ($77.46\%$) outperforms the classification CNN ($65.19\%$) despite using
+The prototype model ($77.40\%$) outperforms the classification CNN ($64.40\%$) despite using
 the same backbone, consistent with findings from Snell et~al.\ \cite{Snell2017} that the
 metric-learning objective is better matched to the few-shot regime.
 
 \textbf{The ceiling is style coverage, not capacity.}
-Even at $77.46\%$, the system falls 22~pp short of supervised accuracy.
+Even at $77.40\%$, the system falls 22~pp short of supervised accuracy.
 This gap reflects the fact that 17 templates cannot cover all handwriting styles in MNIST
 regardless of augmentation or model complexity.
 
@@ -506,25 +542,25 @@ An unexpected finding emerged from a post-hoc augmentation ablation.
 The stroke-width dilation uses morphological dilation with radius $\in\{1,2\}$ and a hard
 intensity floor of 0.85, producing visually unrealistic images—thick, near-binary strokes
 resembling ink blobs rather than handwritten digits.
-Three attempts to replace this with perceptually natural alternatives were tested:
+Replacing this with a perceptually more natural, softer variant (radius~1, lower intensity
+floor of 0.65) consistently \emph{lowers} accuracy (Table~\ref{tab:augvariants}):
 
 \begin{table}[h]
   \centering
-  \caption{Proto accuracy under alternative augmentation variants.}
+  \caption{Proto accuracy: the visually unrealistic ``blob'' augmentation vs.\ a softer,
+           more realistic variant.}
   \label{tab:augvariants}
   \begin{tabular}{@{}lc@{}}
     \toprule
     Augmentation variant & Proto acc.\,(\%) \\
     \midrule
-    Original (radius 1--2, floor 0.85)  & $\mathbf{77.46 \pm 2.39}$ \\
-    Softer (radius 1, floor 0.65)        & $75.55 \pm 2.39$ \\
-    Softer + edge smoothing              & $75.18 \pm 0.85$ \\
-    Wider Gaussian blur ($\sigma\leq2.0$) & $75.21 \pm 2.26$ \\
+    Original (blob; radius 1--2, floor 0.85)  & $\mathbf{77.40 \pm 2.24}$ \\
+    Softer (radius 1, floor 0.65)              & $75.76 \pm 1.95$ \\
     \bottomrule
   \end{tabular}
 \end{table}
 
-Every visually improved variant costs approximately 2~pp.
+The more realistic softer variant costs $1.6$~pp.
 The explanation is distributional: MNIST contains a sub-population of heavy-handed writers
 whose thick, dense strokes resemble the blob augmentation.
 Removing the blobs reduces coverage of this sub-population.

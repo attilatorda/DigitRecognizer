@@ -1,0 +1,60 @@
+{
+  "seeds": [
+    0,
+    1,
+    2,
+    3,
+    4
+  ],
+  "cultivar17_nearest": {
+    "test_acc": 0.386
+  },
+  "cultivar17_no_aug": {
+    "mean": 0.4987000000000001,
+    "std": 0.02860069929215017
+  },
+  "cultivar17_proto": {
+    "mean": 0.77396,
+    "std": 0.02237325188701902
+  },
+  "per_seed": [
+    {
+      "seed": 0,
+      "nearest": 0.4557,
+      "no_aug_cnn": 0.5609,
+      "proto": 0.7605
+    },
+    {
+      "seed": 1,
+      "nearest": 0.5355,
+      "no_aug_cnn": 0.6137,
+      "proto": 0.7818
+    },
+    {
+      "seed": 2,
+      "nearest": 0.5346,
+      "no_aug_cnn": 0.554,
+      "proto": 0.7907
+    },
+    {
+      "seed": 3,
+      "nearest": 0.4487,
+      "no_aug_cnn": 0.5068,
+      "proto": 0.7089
+    },
+    {
+      "seed": 4,
+      "nearest": 0.4311,
+      "no_aug_cnn": 0.534,
+      "proto": 0.6883
+    }
+  ],
+  "summary": {
+    "mnist_nearest_mean": 0.48111999999999994,
+    "mnist_nearest_std": 0.044758302023200115,
+    "mnist_no_aug_mean": 0.55388,
+    "mnist_no_aug_std": 0.03532553750475709,
+    "mnist_proto_mean": 0.74604,
+    "mnist_proto_std": 0.040486224817831554
+  }
+}
