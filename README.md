@@ -174,6 +174,33 @@ raw numbers in `experiments/reports/track9_results.json`.
 > mislabelled as SOTA; an online search established the *actual* reproducible record
 > (An et al.), which is what Track 9 benchmarks against.
 
+#### Track 9b — pivot: does structural/diffusion *diversity* improve the record holder?
+
+A follow-up (`scripts/run_track9_augment.py`) flips the question: instead of *replacing* the
+record holder, *augment* it — stack its M3/M5/M7 with the structural-RF and diffusion-CNN
+members (leakage-free) and ask whether decorrelated diversity helps. Three lines: the record
+holder's own majority **vote** (baseline), a **stack** of M3/M5/M7 only (isolates the stacking
+mechanism), and **plus** = record holder + structural + diffusion.
+
+| n | Record holder (vote) | + structural + diffusion (plus) | Δ |
+|------:|---------------------:|--------------------------------:|------:|
+| 50    | **81.2 ± 2.2** | 73.4 ± 4.2 | −7.8 |
+| 100   | 86.7 ± 2.3 | **90.9 ± 1.4** | +4.2 |
+| 200   | 93.2 ± 1.2 | **95.4 ± 0.5** | +2.1 |
+| 500   | 97.6 ± 0.1 | 97.6 ± 0.1 | +0.1 |
+| ≥1000 | 98.4–99.3 | 98.6–99.4 | ≈0 |
+
+**Finding (a narrow but genuine positive):** adding structural + diffusion diversity lifts the
+record holder by **+2.1 pp at n=200 (95.4 ± 0.5 vs 93.2 ± 1.2, with tighter variance)** and
+**+4.2 pp at n=100** — a real gain over both the voted and stacked record holder (the `plus`
+line beats the M3/M5/M7-only `stack` by +1.3–2.3 pp, so the members add signal, not just the
+combiner). The effect vanishes by n≥500 (record holder already ≥97.6%, no headroom) and
+*reverses* at n≤50, where the logreg stacker overfits its tiny held-out split — a **combiner**
+limitation, not a member one (the `stack` control collapses there too). Net: structural/diffusion
+diversity helps the SOTA precisely in the **n≈100–500 mid-low regime**; unlocking n≤50 needs a
+lower-variance combiner (e.g. weighted averaging) rather than a trained meta-learner. Figure:
+`experiments/reports/figures/fig8_track9_augment.png`; numbers in `track9_augment_results.json`.
+
 ---
 
 ## Install
