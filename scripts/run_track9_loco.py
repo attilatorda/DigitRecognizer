@@ -42,7 +42,6 @@ from src.track9.corruptions import apply_corruption, CORRUPTIONS
 BUDGETS = [100, 200, 500, 1000, 2000]
 HELD_OUT = [c for c in CORRUPTIONS if c != "clean"]   # noise, blur, stroke_dilate, occlusion
 RECORD_KERNELS = (3, 5, 7)
-ROBUST_JSON = os.path.join(ROOT, "experiments", "reports", "track9_robust_results.json")
 
 
 def _select(labels, n, rng):
@@ -79,13 +78,15 @@ def _majority(probs_list):
 def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[loco] device={device} smoke={args.smoke}", flush=True)
-    raw_pool, y_pool = load_mnist_idx(os.path.join(ROOT, "mnist_data"), "train")
-    raw_test, y_test = load_mnist_idx(os.path.join(ROOT, "mnist_data"), "t10k")
+    raw_pool, y_pool = load_mnist_idx(os.path.join(ROOT, args.data_dir), "train")
+    raw_test, y_test = load_mnist_idx(os.path.join(ROOT, args.data_dir), "t10k")
     if args.smoke:
         raw_test, y_test = raw_test[:1500], y_test[:1500]
 
     # agnostic comparison numbers (computed once, in the robust run)
-    agn = json.load(open(ROBUST_JSON))["accuracy"] if os.path.exists(ROBUST_JSON) else {}
+    suffix = f"_{args.tag}" if args.tag else ""
+    robust_json = os.path.join(ROOT, "experiments", "reports", f"track9_robust_results{suffix}.json")
+    agn = json.load(open(robust_json))["accuracy"] if os.path.exists(robust_json) else {}
 
     budgets = [200] if args.smoke else BUDGETS
     held_out = ["gaussian_noise"] if args.smoke else HELD_OUT
@@ -127,7 +128,7 @@ def main(args):
                   f"record_aug_full={fromj('record_aug')}", flush=True)
 
     if not args.smoke:
-        out = os.path.join(ROOT, "experiments", "reports", "track9_loco_results.json")
+        out = os.path.join(ROOT, "experiments", "reports", f"track9_loco_results{suffix}.json")
         with open(out, "w", encoding="utf-8") as f:
             json.dump({"budgets": budgets, "held_out": held_out, "seeds": seeds,
                        "record_aug_loco": {h: {str(n): results[h][n] for n in budgets} for h in held_out}},
@@ -140,6 +141,8 @@ def main(args):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--smoke", action="store_true")
+    p.add_argument("--data-dir", type=str, default="mnist_data")
+    p.add_argument("--tag", type=str, default="")
     p.add_argument("--seeds", type=int, default=5)
     p.add_argument("--record-epochs", type=int, default=40)
     a = p.parse_args()

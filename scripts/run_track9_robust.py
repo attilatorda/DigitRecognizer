@@ -98,8 +98,8 @@ def _corrupt_train(raw_u8, labels, rng):
 def main(args):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"[t9c] device={device} smoke={args.smoke}", flush=True)
-    raw_pool, y_pool = load_mnist_idx(os.path.join(ROOT, "mnist_data"), "train")
-    raw_test, y_test = load_mnist_idx(os.path.join(ROOT, "mnist_data"), "t10k")
+    raw_pool, y_pool = load_mnist_idx(os.path.join(ROOT, args.data_dir), "train")
+    raw_test, y_test = load_mnist_idx(os.path.join(ROOT, args.data_dir), "t10k")
     if args.smoke:
         raw_test, y_test = raw_test[:1500], y_test[:1500]
 
@@ -230,7 +230,8 @@ def main(args):
                                 for c in corruptions} for ln in errdig},
     }
     if not args.smoke:
-        path = os.path.join(ROOT, "experiments", "reports", "track9_robust_results.json")
+        suffix = f"_{args.tag}" if args.tag else ""
+        path = os.path.join(ROOT, "experiments", "reports", f"track9_robust_results{suffix}.json")
         ensure_dir(os.path.dirname(path))
         with open(path, "w", encoding="utf-8") as f:
             json.dump(out, f, indent=2)
@@ -242,6 +243,8 @@ def main(args):
 if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--smoke", action="store_true")
+    p.add_argument("--data-dir", type=str, default="mnist_data")
+    p.add_argument("--tag", type=str, default="", help="suffix for output JSON (e.g. kmnist)")
     p.add_argument("--seeds", type=int, default=10)
     p.add_argument("--record-epochs", type=int, default=40)
     p.add_argument("--cnn-epochs", type=int, default=12)
