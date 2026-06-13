@@ -201,6 +201,31 @@ diversity helps the SOTA precisely in the **n≈100–500 mid-low regime**; unlo
 lower-variance combiner (e.g. weighted averaging) rather than a trained meta-learner. Figure:
 `experiments/reports/figures/fig8_track9_augment.png`; numbers in `track9_augment_results.json`.
 
+#### Track 9c — corruption robustness: a positive in the unknown-corruption regime
+
+The combiner fix (full-budget members, no held-out split — `src/track9/combiners.py`) plus a
+**corruption axis** (`src/track9/corruptions.py`: noise/blur/stroke-thickening/occlusion) turns
+Track 9 into a genuine, honest positive. Members train on the **clean** budget and are evaluated
+on corrupted test sets (`scripts/run_track9_robust.py`, 10 seeds).
+
+- Adding the structural + diffusion members beats the **clean-trained** record holder on mean
+  corruption accuracy at every budget (+1.7→+4.9pp, 8–10/10 seeds). Ablation: the *structural*
+  member drives the low-n stroke gain (skeleton invariance), the *diffusion* member drives the
+  n≥500 noise/occlusion gain.
+- **Honest limit:** if you *know* the corruption and have ≥100 labels, just augment for it —
+  that baseline (`record_aug`) wins by +7→+19pp. The agnostic ensemble only beats it at n=20.
+- **The real positive (leave-one-corruption-out, `scripts/run_track9_loco.py`):** in the
+  realistic *unknown*-corruption setting — train the augmented baseline on the **other**
+  corruptions, test on a held-out one — the corruption-**agnostic** ensemble generalizes to the
+  unseen corruption **as well as or better than targeted augmentation on 3 of 4 corruptions**
+  (blur, stroke-thickening, occlusion; occlusion by +7–9pp at n≥500). Only **gaussian noise**
+  resists (nothing handles it unseen).
+
+**Net:** *corruption-agnostic structural/generative diversity buys low-data robustness to unseen
+geometric/occlusion corruptions that targeted augmentation cannot* — a workshop-tier positive.
+Figures `fig9_track9c_mca.png` / `fig10_track9c_loco.png` / `fig11_track9c_attribution.png`;
+full writeup in `experiments/reports/track9_findings.md`.
+
 ---
 
 ## Install
