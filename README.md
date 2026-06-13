@@ -126,45 +126,53 @@ shrinking to −0.2pp at n=5000) — hard relabeling fragments scarce data. The 
 an **auxiliary sub-class head** (multi-task, no fragmentation) — is the open direction. See
 `cnn_introspection_findings.md`.
 
-### Track 9 — Data Efficiency Benchmark (PROPOSED)
+### Track 9 — Data Efficiency Benchmark
 
-> **Status:** Proposed — not yet implemented. This section describes the planned experiment.
+**Question:** in the low-data regime, can a hand-built ensemble of structural priors beat
+the MNIST CNN *record holder*, and at what data budget? The opponent is **An et al. 2020,
+"An Ensemble of Simple Convolutional Neural Network Models"**
+([arXiv:2008.10400](https://arxiv.org/abs/2008.10400)) — a majority vote of three deep
+"simple" CNNs (kernels 3/5/7, no pooling/padding, BN+ReLU, single FC), the reproducible
+MNIST record at **99.87%** (heterogeneous) / 99.91% (two-level), trained with
+rotation+translation augmentation. It is re-implemented faithfully but **lightly** (one
+model per kernel, ~40 epochs) in `src/track9/record_models.py`; our light repro reaches
+**99.65%** at full 60k (M3 99.53, M5 99.57, M7 99.51), below the published record as
+expected.
 
-**Goal:** Compare a modern SOTA CNN (“BestNet”) against the best ensemble method from
-Track 7 (heterogeneous stacking) across a range of very small to moderate training set
-sizes. The central question: *At what data budget does a complex single CNN overtake a
-diverse ensemble, and how large is the ensemble’s advantage in the low‑data regime?*
+**Three contestants**, trained on the *same* stratified budget (exactly n/10 per digit),
+5 seeds, evaluated on the full 10k test set (`scripts/run_track9_benchmark.py`):
+1. **Record holder** — An et al. M3/M5/M7 majority vote (light repro).
+2. **Grand ensemble** — my best: leakage-free stack of skeleton-fusion CNN (Track 3) +
+   structural bag-of-features RF (Track 6) + a diffusion-augmented CNN (Track 5, active
+   only for n≥500 where a DDPM can be trained).
+3. **Grand ensemble + augmentation** — contestant 2 with morphological augmentation.
 
-**Track 9A — BestNet (SOTA CNN):**  
-A concrete, reproducible architecture designed to achieve **≥99.585%** on the full MNIST
-test set (60k training) in ≤25 epochs. BestNet is a streamlined CNN with:
-- 2 convolutional layers (32 and 64 filters, 3×3, ReLU, BatchNorm, MaxPooling 2×2)
-- Dropout (0.25 after first pooling, 0.5 before the output layer)
-- 1 fully connected layer (128 units, ReLU)
-- Output softmax (10 classes)  
-Training: Adam (lr=0.001), categorical crossentropy, batch size 128, 25 epochs.
+**Result (MNIST test acc %, mean over 5 seeds):**
 
-**Track 9B — Heterogeneous Ensemble (derived from Track 7):**  
-A majority voting ensemble of three distinct CNN architectures, each with identical
-depth but different receptive fields:
-- **CNN 3x3:** two conv layers (32/64, 3×3 kernels)
-- **CNN 5x5:** two conv layers (32/64, 5×5 kernels, same padding)
-- **CNN 7x7:** two conv layers (32/64, 7×7 kernels, same padding)  
-All three have BatchNorm, MaxPooling (2×2), a 128 unit FC layer, and Dropout (same rates).
-No meta classifier stacking — simple vote to keep the comparison clean and avoid
-additional parameters that would favour the ensemble in the low data regime.
+| n (labeled) | Record holder | Grand ensemble | Grand + aug |
+|------------:|--------------:|---------------:|------------:|
+| 20    | **64.2** | 44.1 | 46.7 |
+| 50    | **83.4** | 58.4 | 61.3 |
+| 100   | **90.2** | 80.9 | 81.1 |
+| 200   | **96.2** | 86.6 | 89.6 |
+| 500   | **98.2** | 92.6 | 95.5 |
+| 1000  | **98.8** | 95.0 | 96.9 |
+| 2000  | **99.1** | 96.7 | 98.0 |
+| 5000  | **99.4** | 97.8 | 98.7 |
+| 60000 | **99.65** | — | — |
 
-**Experiment plan:**
+**Track 9 finding (a clean negative):** the record holder wins at **every** budget,
+including the extreme low-data regime where structural priors were expected to help most
+(64% vs 47% at n=20). Simple rotation/translation augmentation on a deep CNN is more
+data-efficient than explicit skeleton/bag-of-features structure. Two consolation positives:
+augmentation reliably helps (`grand+aug > grand` at every n), and the gap is purely a
+low-data phenomenon — by n≥1000 the grand ensemble is within ~2pp, converging toward (but
+never overtaking) the record holder. Figure: `experiments/reports/figures/fig7_track9_efficiency.png`;
+raw numbers in `experiments/reports/track9_results.json`.
 
-1. **Training sets:** For each size in `[100, 200, 500, 1000, 2000, 5000, 10000]`,
-   randomly sample the specified number of labeled MNIST training examples, **stratified**
-   by class (equal per class). Each size is evaluated with **5 different random seeds**.
-2. **Models:** Train BestNet (Track 9A) and the Heterogeneous Ensemble (Track 9B)
-   separately on each sampled training set.
-3. **Testing:** All models evaluated on the **full MNIST test set** (10,000 images) after
-   each training run.
-4. **Metrics:** Mean test accuracy ± standard deviation over 5 seeds. Also record
-   training time per model (CPU/GPU) and inference time.
+> Note: the proposal's original "BestNet ≥99.585%" single CNN was a vanilla 2-conv net
+> mislabelled as SOTA; an online search established the *actual* reproducible record
+> (An et al.), which is what Track 9 benchmarks against.
 
 ---
 
