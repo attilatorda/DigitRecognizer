@@ -105,3 +105,32 @@ plt.savefig(os.path.join(FIG, "fig11_track9c_attribution.png"), dpi=180, facecol
 plt.close()
 
 print("saved fig9_track9c_mca.png, fig10_track9c_loco.png, fig11_track9c_attribution.png")
+
+# ---- fig13: KMNIST LOCO (generality) ----
+krob_p = os.path.join(REP, "track9_robust_results_kmnist.json")
+kloco_p = os.path.join(REP, "track9_loco_results_kmnist.json")
+if os.path.exists(krob_p) and os.path.exists(kloco_p):
+    krob = json.load(open(krob_p))
+    kloco = json.load(open(kloco_p))
+    LB = kloco["budgets"]
+    fig, axes = plt.subplots(2, 2, figsize=(9.2, 6.4), sharex=True)
+    for ax, h in zip(axes.ravel(), kloco["held_out"]):
+        ka = lambda line, n: (krob["accuracy"][line][h][str(n)]["mean"] * 100
+                              if krob["accuracy"][line][h][str(n)] else np.nan)
+        ax.plot(LB, [ka("record_vote", n) for n in LB], "s:", color="#c0392b", ms=4, label="clean-trained")
+        ax.plot(LB, [ka("record_aug", n) for n in LB], "D--", color="#8e44ad", ms=4,
+                label="aug on THIS corruption")
+        ax.plot(LB, [kloco["record_aug_loco"][h][str(n)]["mean"] * 100 for n in LB], "v-",
+                color="#e67e22", ms=4, label="aug on OTHER corruptions (unseen)")
+        ax.plot(LB, [ka("conf_all", n) for n in LB], "^-", color="#27ae60", ms=5,
+                label="agnostic ensemble (ours)")
+        ax.set_xscale("log"); ax.set_title(h, fontsize=10); ax.grid(True, ls="--", alpha=0.4)
+    axes[1, 0].set_xlabel("budget n"); axes[1, 1].set_xlabel("budget n")
+    axes[0, 0].set_ylabel("test accuracy (%)"); axes[1, 0].set_ylabel("test accuracy (%)")
+    axes[0, 0].legend(fontsize=7, loc="lower right")
+    fig.suptitle("KMNIST LOCO: generalization to an UNSEEN corruption (agnostic vs targeted aug)",
+                 fontsize=11)
+    plt.tight_layout()
+    plt.savefig(os.path.join(FIG, "fig13_track9c_kmnist_loco.png"), dpi=180, facecolor="white")
+    plt.close()
+    print("saved fig13_track9c_kmnist_loco.png")

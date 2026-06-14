@@ -226,6 +226,15 @@ geometric/occlusion corruptions that targeted augmentation cannot* — a worksho
 Figures `fig9_track9c_mca.png` / `fig10_track9c_loco.png` / `fig11_track9c_attribution.png`;
 full writeup in `experiments/reports/track9_findings.md`.
 
+**Strengthened (generality + severity).** The result **reproduces on KMNIST**
+(`scripts/run_track9_robust.py --data-dir kmnist_data --tag kmnist`): +3.8pp mCA at n=1000
+(10/10 seeds), and under LOCO the agnostic ensemble beats unseen-corruption augmentation on
+**all four** corruptions at n≥1000 (even gaussian noise, which resisted on MNIST). A **severity
+sweep** (`scripts/run_track9_severity.py`) shows the gain **grows with corruption strength**
+(blur +20pp at σ=2.0, occlusion +16pp), not a single-severity artifact. These feed the
+standalone short paper `experiments/reports/track9c_paper.tex` (4 pp); figures
+`fig12_track9c_severity.png` / `fig13_track9c_kmnist_loco.png`.
+
 ---
 
 ## Install

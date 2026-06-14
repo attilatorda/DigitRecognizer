@@ -1,0 +1,74 @@
+{
+  "budget": 2000,
+  "seeds": 5,
+  "results": {
+    "gaussian_noise": {
+      "0.25": {
+        "record_vote": 0.6182000000000001,
+        "conf_all": 0.8189
+      },
+      "0.5": {
+        "record_vote": 0.13586,
+        "conf_all": 0.20778
+      },
+      "0.75": {
+        "record_vote": 0.1031,
+        "conf_all": 0.10755999999999999
+      },
+      "1.0": {
+        "record_vote": 0.10014,
+        "conf_all": 0.09836
+      }
+    },
+    "blur": {
+      "0.7": {
+        "record_vote": 0.98994,
+        "conf_all": 0.9890399999999999
+      },
+      "1.1": {
+        "record_vote": 0.9651399999999999,
+        "conf_all": 0.97414
+      },
+      "1.5": {
+        "record_vote": 0.6906800000000001,
+        "conf_all": 0.8363000000000002
+      },
+      "2.0": {
+        "record_vote": 0.25164,
+        "conf_all": 0.45162
+      }
+    },
+    "stroke_dilate": {
+      "1": {
+        "record_vote": 0.9565400000000001,
+        "conf_all": 0.96126
+      },
+      "2": {
+        "record_vote": 0.6629599999999999,
+        "conf_all": 0.75114
+      },
+      "3": {
+        "record_vote": 0.26444,
+        "conf_all": 0.36398
+      }
+    },
+    "occlusion": {
+      "6": {
+        "record_vote": 0.9220600000000001,
+        "conf_all": 0.95168
+      },
+      "10": {
+        "record_vote": 0.68916,
+        "conf_all": 0.78954
+      },
+      "14": {
+        "record_vote": 0.36994000000000005,
+        "conf_all": 0.5282
+      },
+      "18": {
+        "record_vote": 0.16966,
+        "conf_all": 0.2502
+      }
+    }
+  }
+}

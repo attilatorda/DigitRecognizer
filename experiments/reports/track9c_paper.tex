@@ -37,7 +37,9 @@ augmented baseline is trained on all corruptions \emph{except} the one it is tes
 There, the corruption-agnostic ensemble generalises to the unseen corruption as well as or
 better than targeted augmentation on three of four corruption types (blur, stroke
 thickening, occlusion; occlusion by $+7$--$9$~pp at $n\!\geq\!500$); only additive Gaussian
-noise resists. The result is a clear, honestly-scoped positive: when the deployment
+noise resists. The effect reproduces on the harder KMNIST script---where the agnostic ensemble
+beats unseen-corruption augmentation on \emph{all four} corruptions at $n\!\geq\!1000$---and
+\emph{grows} with corruption severity. The result is a clear, honestly-scoped positive: when the deployment
 corruption is unknown, corruption-agnostic structural and generative diversity buys low-data
 robustness that targeted augmentation cannot.
 \end{abstract}
@@ -182,6 +184,56 @@ gaussian\_noise & $-2.1$ & $-14.4$& $-1.0$ & $-3.9$ & $+2.0$ \\
 \end{tabular}
 \end{table}
 
+\subsection{Generality to a harder script (KMNIST)}
+Repeating the study on KMNIST \cite{Clanuwat2018}, a harder $10$-class cursive-Japanese set,
+reproduces the pattern. The agnostic ensemble improves mCA once the diffusion member is active
+($+3.8$~pp at $n\!=\!1000$, $+3.4$ at $n\!=\!2000$; $10/10$ seeds), and informed augmentation
+again wins at intermediate budgets. Under the leave-one-corruption-out protocol
+(Table~\ref{tab:kmnistloco}, Fig.~\ref{fig:kmnistloco}) the agnostic ensemble beats
+unseen-corruption augmentation on \emph{all four} corruptions at $n\!\geq\!1000$---including
+gaussian noise, which had resisted on MNIST---so the effect is not specific to MNIST.
+
+\begin{table}[t]
+\caption{KMNIST LOCO: \texttt{conf\_all} $-$ \texttt{record\_aug\_loco} on the \emph{unseen}
+         corruption (pp). Positive favours the agnostic ensemble.}
+\label{tab:kmnistloco}
+\centering
+\begin{tabular}{@{}lrrrrr@{}}
+\toprule
+held-out & $100$ & $200$ & $500$ & $1000$ & $2000$ \\
+\midrule
+blur            & $+2.1$ & $+2.8$ & $+2.0$ & $+2.0$ & $+4.0$ \\
+stroke\_dilate  & $+5.9$ & $+1.4$ & $-2.1$ & $+1.0$ & $+0.5$ \\
+occlusion       & $+5.1$ & $+3.7$ & $+2.4$ & $+3.7$ & $+4.1$ \\
+gaussian\_noise & $-1.2$ & $-3.8$ & $+6.5$ & $+8.8$ & $+4.3$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Severity dependence}
+Figure~\ref{fig:sev} sweeps corruption severity at $n\!=\!2000$. The advantage is not an
+artefact of a single severity: it \emph{grows} with severity, peaking where the record holder
+degrades most---blur $+20$~pp at $\sigma\!=\!2.0$, occlusion $+16$~pp at side $14$, stroke
+$+10$~pp at radius $3$---and only vanishes under near-destructive Gaussian noise, where every
+method approaches chance.
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig13_track9c_kmnist_loco.png}
+\caption{KMNIST leave-one-corruption-out. The corruption-agnostic ensemble (green) matches or
+beats augmentation trained on the \emph{other} corruptions (orange) at the unseen corruption on
+all four types for $n\!\geq\!1000$.}
+\label{fig:kmnistloco}
+\end{figure}
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{figures/fig12_track9c_severity.png}
+\caption{Severity sweep at $n\!=\!2000$. The agnostic ensemble's advantage over the record
+holder grows with corruption severity, except under near-destructive Gaussian noise.}
+\label{fig:sev}
+\end{figure}
+
 \begin{figure}[t]
 \centering
 \includegraphics[width=\columnwidth]{figures/fig9_track9c_mca.png}
@@ -219,17 +271,19 @@ unseen. (iii)~\textbf{The combiner is not the hero}: confidence weighting (\text
 no better than plain averaging (\texttt{soft}); the gain comes from member diversity, not the
 combination rule. (iv)~\textbf{Mechanism is mixed}: stroke-thickness invariance only carries
 the low-budget stroke gain; the larger gains are from the diffusion (generative-augmentation)
-member. (v)~We use a single moderate severity per corruption and a single dataset; a severity
-sweep and a second script (e.g.\ KMNIST) would test generality.
+member. (v)~The gain needs the diffusion member and hence $\geq\!500$ labels; below that only
+the structural member contributes and the effect is small. The corruption suite, though now
+swept over severity and reproduced on a second script (KMNIST), remains synthetic---physical
+corruptions are untested.
 
 \section{Conclusion}
 A reproducible MNIST record ensemble is highly data-efficient but brittle to unseen
 corruptions in the low-data regime. Adding corruption-agnostic structural and generative
 members---combined without sacrificing labels to a held-out split---improves its robustness
 to corruptions it was not trained for, generalising to unseen blur, stroke thickening and
-occlusion as well as or better than targeted augmentation. When the deployment corruption is
-unknown, corruption-agnostic diversity is a label-free robustness lever; when it is known,
-train for it.
+occlusion as well as or better than targeted augmentation. The effect reproduces on the harder
+KMNIST script and grows with corruption severity. When the deployment corruption is unknown,
+corruption-agnostic diversity is a label-free robustness lever; when it is known, train for it.
 
 \section*{Reproducibility}
 Experiments: \texttt{scripts/run\_track9\_robust.py} (mCA, ablation),
