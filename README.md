@@ -17,7 +17,7 @@ extraction.
 | 6 | **Structural** | `src/structural` | Bag-of-features from a skeleton graph (no learning) |
 | 7 | **Combined** | `src/ensemble` | Best-of-everything supervised system + exemplar selection (*not* one-shot) |
 | 8 | **Introspection** | `scripts/probe_variant_recovery.py`, `run_subclass_expansion.py` | Extracting latent style-variant structure from CNNs |
-| 9 | **Data Efficiency Benchmark (PROPOSED)** | `src/track9_benchmark` | **BestNet (SOTA CNN) vs. Heterogeneous Ensemble** on small training sets (100–10,000 labels) |
+| 9 | **Data Efficiency + Robustness** | `src/track9`, `scripts/run_track9_*.py` | Vs. the MNIST record holder (An et al.): data-efficiency benchmark (9), augment-the-record-holder (9b), corruption-agnostic robustness (9c) |
 
 Tracks 1–6 are supervised or one-shot; **Tracks 7–8 deliberately step outside one-shot** —
 Track 7 fuses the strongest pieces of the prior tracks on MNIST training data; Track 8
