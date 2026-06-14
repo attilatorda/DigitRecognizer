@@ -29,15 +29,30 @@ Last updated after Track 9c (corruption robustness) was strengthened and Track 8
 
 ## Paper 2 — Track 9c corruption robustness (Track 9)
 
-- **Source:** `track9c_paper.tex` (IEEEtran short paper, 4 pp, compiles, 0 undefined refs).
+- **Source:** `track9c_paper_neurips.tex` (**NeurIPS workshop format**, 6 pp, compiles, 0
+  undefined refs) — the venue-formatted submission version. `track9c_paper.tex` (IEEEtran, 4 pp)
+  kept as the arXiv/preprint variant. Both use `track9c_refs.bib`; figures fig9–13.
 - **Claim:** in the unknown-corruption setting, corruption-agnostic structural/generative
   diversity generalises to unseen corruptions as well as or better than targeted augmentation
   (blur/stroke/occlusion); reproduces on KMNIST; the gain grows with severity.
-- **Venue plan:** post to **arXiv now**; target a **NeurIPS 2026 / ICLR 2027 workshop**
-  (robustness, distribution shift, or data-centric ML) when CFPs open (NeurIPS 2026 workshop
-  list not yet announced as of mid-2026). Reformat to the chosen workshop's template once locked.
+- **Venue plan:** post to **arXiv now**; submit to a **NeurIPS 2026 / ICLR 2027 workshop**
+  (robustness, distribution shift, or data-centric ML) when CFPs open. NeurIPS style already applied.
 - **Optional strengtheners (not blocking):** physical/real corruptions; a noise-robust agnostic
-  member (the one corruption that resists); more datasets.
+  member; more datasets.
+
+## Paper 3 — MNIST data-efficiency benchmark (Tracks 9/9b)
+
+- **Source:** `track9_benchmark_paper.tex` (**NeurIPS workshop format**, 3 pp, compiles, 0
+  undefined refs); `track9_benchmark_refs.bib`; figures fig7/fig8.
+- **Claim (honest benchmark + pitfall):** the MNIST record holder is the data-efficiency winner
+  at every budget (64% @ n=20 → 99.4% @ n=5000); a structural+generative ensemble converges to
+  within ~2pp by n≥1000 but never overtakes; and the apparent "augment the record holder" gain
+  is largely a **held-out-split artifact** (low-data stacking must use full-budget baselines).
+- **Venue plan:** NeurIPS workshop / Datasets & Benchmarks-style data-centric venue; arXiv.
+
+## Venue formats (all three target their venue's LaTeX template)
+- P1 → Elsevier `elsarticle` (Pattern Recognition Letters). P2, P3 → NeurIPS style
+  (`neurips_2024.sty`, numbered natbib citations). All compile clean with 0 undefined refs.
 
 ## What is intentionally NOT being done
 - No third paper from Tracks 1–3/7 (supporting findings, not standalone-paper-worthy).
