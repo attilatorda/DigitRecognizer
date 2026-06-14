@@ -1,5 +1,12 @@
 # Track 8 — extracting latent variant structure from CNNs (investigation)
 
+> **Status: CLOSED.** Finding 1 (the variant is extractable from a 10-class CNN) is a
+> confirmed positive; Finding 2 (naive hard sub-class relabeling) is a confirmed negative with
+> a clear cause (data fragmentation). The principled fix — an auxiliary sub-class head
+> (`CE_10 + λ·CE_subclass`) — is documented below as future work and **deliberately not pursued
+> in this project** (the data-efficiency/robustness story moved to Track 9). No further
+> experiments planned.
+
 **Question.** (1) Can the style *variants* of a digit (e.g. crossed vs uncrossed 7) be
 recovered from a CNN that was only trained on 10-class labels? (2) If so, can that be used
 to improve training — by weighting "basic truths" more, or by splitting a class into

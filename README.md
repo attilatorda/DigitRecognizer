@@ -294,6 +294,28 @@ python scripts/run_combined_track.py --smoke  # quick
 python scripts/build_member_predictions.py && python scripts/run_ensemble_track.py
 ```
 
+### Track 8 — CNN introspection (variant structure) — *closed*
+```bash
+python scripts/probe_variant_recovery.py      # Finding 1: variant IS linearly extractable
+python scripts/run_subclass_expansion.py      # Finding 2: hard sub-class relabeling hurts
+```
+Positive: the crossed/uncrossed style variant survives in a plain 10-class CNN embedding (linear
+probe 83.8%) and is recovered strongly in structural-feature space (KMeans ARI 0.83). Negative:
+exploiting it by hard sub-class relabeling fragments scarce data and hurts (−12pp at n=100,
+shrinking to ~0 by n=5000). The principled fix (an auxiliary sub-class head) is documented as
+future work but not pursued. See `experiments/reports/cnn_introspection_findings.md`.
+
+### Track 9 — data efficiency + corruption robustness
+```bash
+python scripts/run_track9_benchmark.py        # 9: vs the MNIST record holder (An et al.)
+python scripts/run_track9_augment.py          # 9b: augment-the-record-holder
+python scripts/run_track9_robust.py           # 9c: corruption robustness (mCA, ablation)
+python scripts/run_track9_loco.py             # 9c: leave-one-corruption-out (unseen corruptions)
+python scripts/run_track9_severity.py         # 9c: severity sweep
+```
+See the Track 9 section above and `experiments/reports/track9_findings.md` /
+`track9c_paper.tex`.
+
 ### Interactive browser
 ```bash
 launch_browser.bat        # or: python -m streamlit run scripts/mnist_browser_app.py
@@ -305,9 +327,11 @@ Browse MNIST/`.npy` datasets, tag images, detect duplicates, view a paginated ga
 ## Reports & analysis
 
 - [Reports Index (HTML)](experiments/reports/index.html)
-- **CultiVar-17 paper (canonical):** `experiments/reports/cultivar17_paper.pdf` (IEEEtran, 5pp) — source `cultivar17_paper.tex`; [short summary](experiments/reports/one_shot_17digit_paper_draft.md)
+- **Paper 1 — CultiVar-17 one-shot (Tracks 4/5/6):** `experiments/reports/cultivar17_paper.pdf` (Elsevier `elsarticle`, targeting Pattern Recognition Letters) — source `cultivar17_paper.tex`; highlights/cover-letter alongside.
+- **Paper 2 — Track 9c corruption robustness:** `experiments/reports/track9c_paper.pdf` (IEEEtran short paper, 4pp) — source `track9c_paper.tex`; [findings](experiments/reports/track9_findings.md)
 - [Diffusion track status & results](experiments/reports/diffusion_track_status.md)
 - [Structural early findings](experiments/reports/structural_early_findings.md)
+- [CNN introspection / Track 8 (closed)](experiments/reports/cnn_introspection_findings.md)
 - [Skeleton CNN vs Local CNN analysis (HTML)](experiments/reports/skeleton_vs_local_analysis.html)
 
 ---
