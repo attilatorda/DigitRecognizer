@@ -294,16 +294,24 @@ python scripts/run_combined_track.py --smoke  # quick
 python scripts/build_member_predictions.py && python scripts/run_ensemble_track.py
 ```
 
-### Track 8 — CNN introspection (variant structure) — *closed*
+### Track 8 — CNN introspection: decode, reconstruct, extract logic
 ```bash
-python scripts/probe_variant_recovery.py      # Finding 1: variant IS linearly extractable
-python scripts/run_subclass_expansion.py      # Finding 2: hard sub-class relabeling hurts
+python scripts/probe_variant_recovery.py        # F1: variant IS linearly extractable
+python scripts/run_subclass_expansion.py        # F2: hard sub-class relabeling hurts
+python scripts/run_introspection_reconstruct.py # F3/F4: rebuild digits + the variant axis
+python scripts/run_logic_extraction.py          # F5: extract XOR/AND/OR from minimal nets
 ```
-Positive: the crossed/uncrossed style variant survives in a plain 10-class CNN embedding (linear
-probe 83.8%) and is recovered strongly in structural-feature space (KMeans ARI 0.83). Negative:
-exploiting it by hard sub-class relabeling fragments scarce data and hurts (−12pp at n=100,
-shrinking to ~0 by n=5000). The principled fix (an auxiliary sub-class head) is documented as
-future work but not pursued. See `experiments/reports/cnn_introspection_findings.md`.
+- **Decode (F1/F2):** the crossed/uncrossed style variant survives in a plain 10-class CNN
+  embedding (linear probe 83.8%; structural-space KMeans ARI 0.83); exploiting it by *hard*
+  sub-class relabeling fragments scarce data and hurts (−12pp @ n=100 → ~0 @ n=5000).
+- **Reconstruct (F3/F4):** activation maximization rebuilds all 10 digits (each self-classifies
+  at 100%); steering the embedding along the probe direction moves the variant score
+  monotonically (−8.2 → +25.0) — the variant axis is *generative*, not just decodable.
+- **Extract logic (F5):** minimal 2-2-1 MLPs yield exact truth tables for all six Boolean gates;
+  XOR reads off the weights as (¬a∧b)∨(a∧¬b); a 0-hidden linear net solves AND/OR (100%) but
+  cannot fit XOR (50%).
+
+See `experiments/reports/cnn_introspection_findings.md`; figures `fig_track8_{reconstruct,variants,logic}.png`.
 
 ### Track 9 — data efficiency + corruption robustness
 ```bash

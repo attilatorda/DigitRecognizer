@@ -14,7 +14,7 @@ Last updated after Track 9c (corruption robustness) was strengthened and Track 8
 | 5 | Diffusion augmentation | done → **Paper 1** | learned aug matches/exceeds hand-crafted (79.1%) |
 | 6 | Structural bag-of-features | done → **Paper 1** | 72.3% from skeleton graph, no deep learning |
 | 7 | Combined system + exemplar selection | done | stacking + data-efficiency curve; prototypical-vs-random study |
-| 8 | CNN introspection (variant structure) | **closed** | +: variant is extractable (probe 83.8%, ARI 0.83); −: hard relabeling hurts; auxiliary head = documented future work, not pursued |
+| 8 | CNN introspection (decode/reconstruct/logic) | **reopened** | F1/F2: variant decodable (probe 83.8%, ARI 0.83), hard relabeling hurts. F3: activation-max rebuilds all 10 digits (100% self-classify). F4: variant axis is generative (probe score steers −8.2→+25.0). F5: XOR/AND/OR exactly extracted from minimal nets (XOR=(¬a∧b)∨(a∧¬b); linear can't fit XOR). Auxiliary head still future work. |
 | 9 | Data efficiency + robustness | done → **Paper 2** | 9: record holder unbeatable head-to-head; 9b: held-out-split artifact; 9c: corruption-agnostic diversity helps on unseen corruptions |
 
 ## Paper 1 — CultiVar-17 one-shot (Tracks 4/5/6)

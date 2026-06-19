@@ -1,11 +1,11 @@
 # Track 8 — extracting latent variant structure from CNNs (investigation)
 
-> **Status: CLOSED.** Finding 1 (the variant is extractable from a 10-class CNN) is a
-> confirmed positive; Finding 2 (naive hard sub-class relabeling) is a confirmed negative with
-> a clear cause (data fragmentation). The principled fix — an auxiliary sub-class head
-> (`CE_10 + λ·CE_subclass`) — is documented below as future work and **deliberately not pursued
-> in this project** (the data-efficiency/robustness story moved to Track 9). No further
-> experiments planned.
+> **Status: REOPENED (2026-06).** Findings 1–2 stand (variant is decodable; hard relabeling
+> hurts). The track was extended from *decoding* to *reconstruction + logic extraction*
+> (Findings 3–5 below), answering three questions: can we rebuild digits, rebuild variants, and
+> extract logic (XOR) from a network? Short answers: **yes**, **yes at the representation level**,
+> and **yes (cleanly, for minimal Boolean nets)**. The auxiliary sub-class head remains
+> documented future work, not pursued.
 
 **Question.** (1) Can the style *variants* of a digit (e.g. crossed vs uncrossed 7) be
 recovered from a CNN that was only trained on 10-class labels? (2) If so, can that be used
@@ -72,6 +72,41 @@ boundary focus and is expected to hurt for the same reason.
 Reproduce: `python scripts/probe_variant_recovery.py` (Finding 1),
 `python scripts/run_subclass_expansion.py` (Finding 2). Raw numbers:
 `subclass_expansion_results.json`.
+
+## Finding 3 — digits ARE graphically reconstructable from the net (JUSTIFIED)
+
+Activation maximization (gradient ascent on the input to maximize a class logit, with
+total-variation / L2 / periodic-blur regularizers) rebuilds a recognizable image for **all 10
+digits**; each reconstruction is **self-classified as its target class at 100% confidence**.
+The images are ghostly and tiled (the activation-max signature — the CNN's
+translation-equivariance produces repeated motifs) rather than photorealistic, but the digit
+forms (0,1,2,3,5,6,7,8,9 especially) are clearly legible. So a discriminative CNN carries a
+recoverable *generative* template of each class in its weights. Figure:
+`figures/fig_track8_reconstruct.png`. Reproduce: `scripts/run_introspection_reconstruct.py`.
+
+## Finding 4 — the variant axis is GENERATIVE in representation space (JUSTIFIED, with a caveat)
+
+Taking the digit-7 crossed/uncrossed probe direction $w$ (Finding 1) and reconstructing a 7
+while pushing its embedding along $\pm w$ moves the embedding's variant score **monotonically
+from $-8.2$ (uncrossed) to $+25.0$ (crossed)** across the sweep, and the pixel reconstruction
+visibly shifts toward crossbar structure at the crossed end. So Finding 1's *decodable* axis is
+also *steerable/generative* — the network can be driven to render either variant.
+**Caveat:** the reconstructions are too noisy for a clean pixel-level crossbar metric — skeleton
+junction counts ($\sim$10–14 across the sweep) are dominated by activation-max speckle, so the
+claim rests on the monotone probe score (quantitative) plus visual inspection, not a junction
+count. Figure: `figures/fig_track8_variants.png`.
+
+## Finding 5 — logic (XOR) IS exactly extractable from minimal nets (JUSTIFIED)
+
+For the six 2-input Boolean gates, a minimal 2-2-1 MLP fits each truth table and the logic is
+**exactly recovered** by enumerating the four inputs (**6/6 gates**). The XOR mechanism reads
+straight off the weights: the two hidden units become single-corner detectors $\neg a\wedge b$
+and $a\wedge\neg b$, OR-combined at the output — i.e. **XOR $=(\neg a\wedge b)\vee(a\wedge\neg
+b)$**, the textbook sum-of-minterms. The control confirms necessity of depth: a 0-hidden linear
+unit solves the linearly separable gates (AND/OR/NAND/NOR at 100%) but **cannot fit XOR/XNOR
+(50%)**. Logic extraction is exact for small nets; extracting XOR-like structure from the full
+MNIST CNN would be approximate (not pursued). Figure: `figures/fig_track8_logic.png`; raw:
+`track8_logic_results.json`. Reproduce: `scripts/run_logic_extraction.py`.
 
 ## Future ideas (not yet run)
 

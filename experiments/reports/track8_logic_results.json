@@ -1,0 +1,129 @@
+{
+  "AND": {
+    "target": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "recovered_mlp": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "mlp_exact": true,
+    "linear_acc": 1.0,
+    "linearly_separable": true
+  },
+  "OR": {
+    "target": [
+      0,
+      1,
+      1,
+      1
+    ],
+    "recovered_mlp": [
+      0,
+      1,
+      1,
+      1
+    ],
+    "mlp_exact": true,
+    "linear_acc": 1.0,
+    "linearly_separable": true
+  },
+  "XOR": {
+    "target": [
+      0,
+      1,
+      1,
+      0
+    ],
+    "recovered_mlp": [
+      0,
+      1,
+      1,
+      0
+    ],
+    "mlp_exact": true,
+    "linear_acc": 0.5,
+    "linearly_separable": false,
+    "mechanism": {
+      "hidden_primitives": [
+        "~a^b",
+        "a^~b"
+      ],
+      "W1": [
+        [
+          -5.459589004516602,
+          5.36090612411499
+        ],
+        [
+          4.9361572265625,
+          -5.2011213302612305
+        ]
+      ],
+      "b1": [
+        -2.6507487297058105,
+        -2.3433005809783936
+      ],
+      "W2": [
+        10.894640922546387,
+        10.795931816101074
+      ],
+      "b2": 10.416849136352539
+    }
+  },
+  "XNOR": {
+    "target": [
+      1,
+      0,
+      0,
+      1
+    ],
+    "recovered_mlp": [
+      1,
+      0,
+      0,
+      1
+    ],
+    "mlp_exact": true,
+    "linear_acc": 0.5,
+    "linearly_separable": false
+  },
+  "NAND": {
+    "target": [
+      1,
+      1,
+      1,
+      0
+    ],
+    "recovered_mlp": [
+      1,
+      1,
+      1,
+      0
+    ],
+    "mlp_exact": true,
+    "linear_acc": 1.0,
+    "linearly_separable": true
+  },
+  "NOR": {
+    "target": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "recovered_mlp": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "mlp_exact": true,
+    "linear_acc": 1.0,
+    "linearly_separable": true
+  }
+}
