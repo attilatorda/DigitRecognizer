@@ -338,6 +338,7 @@ Browse MNIST/`.npy` datasets, tag images, detect duplicates, view a paginated ga
 - **Paper 1 — CultiVar-17 one-shot (Tracks 4/5/6):** `cultivar17_paper.pdf` (Elsevier `elsarticle`, → Pattern Recognition Letters) — source `cultivar17_paper.tex`; highlights/cover-letter alongside.
 - **Paper 2 — Track 9c corruption robustness:** `track9c_paper_neurips.pdf` (**NeurIPS workshop format**, 6pp; arXiv variant `track9c_paper.pdf` IEEEtran) — [findings](experiments/reports/track9_findings.md)
 - **Paper 3 — MNIST data-efficiency benchmark (Tracks 9/9b):** `track9_benchmark_paper.pdf` (**NeurIPS workshop format**, 3pp) — honest benchmark + the held-out-split stacking pitfall
+- **Paper 4 — Skeletonization is lossy (Track 3, negative):** `skeleton_paper.pdf` (**NeurIPS workshop format**, 3pp) — topology-only trails raw pixels ~1pp; fusion/Hough don't recover it
 - [Diffusion track status & results](experiments/reports/diffusion_track_status.md)
 - [Structural early findings](experiments/reports/structural_early_findings.md)
 - [CNN introspection / Track 8 (closed)](experiments/reports/cnn_introspection_findings.md)

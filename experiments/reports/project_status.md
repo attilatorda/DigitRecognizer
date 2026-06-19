@@ -50,9 +50,26 @@ Last updated after Track 9c (corruption robustness) was strengthened and Track 8
   is largely a **held-out-split artifact** (low-data stacking must use full-budget baselines).
 - **Venue plan:** NeurIPS workshop / Datasets & Benchmarks-style data-centric venue; arXiv.
 
-## Venue formats (all three target their venue's LaTeX template)
-- P1 → Elsevier `elsarticle` (Pattern Recognition Letters). P2, P3 → NeurIPS style
+## Paper 4 — Skeletonization is lossy (Track 3, publishable negative)
+
+- **Source:** `skeleton_paper.tex` (**NeurIPS workshop format**, 3 pp, 0 undefined refs);
+  `skeleton_refs.bib`; figure `fig_skeleton_negative.png`.
+- **Claim (controlled negative):** across four thinning algorithms a CNN on skeletonized MNIST
+  trails raw pixels by ~1pp (best 98.11 vs 99.03); the loss is recovered neither by raw+skeleton
+  fusion (98.98 < 99.03) nor Hough features (+0.01pp); it concentrates on stroke-width-sensitive
+  digits (3/5/9/8); medial-axis is 100× slower for no gain. Stroke width/intensity are features,
+  not nuisances — topology alone is strictly lossy for supervised digit CNNs.
+- **Venue plan:** a negative-/surprising-results workshop (e.g. ICBINB) or general ML workshop; arXiv.
+- **Source numbers:** `skeleton_comparison.md` (3 seeds, `scripts/run_skeleton_experiment.py`).
+
+## Venue formats (all four target their venue's LaTeX template)
+- P1 → Elsevier `elsarticle` (Pattern Recognition Letters). P2, P3, P4 → NeurIPS style
   (`neurips_2024.sty`, numbered natbib citations). All compile clean with 0 undefined refs.
+
+## Not pursued as standalone papers
+- Track 8 introspection (reconstruction/logic): parts are textbook (activation-max, XOR-from-MLP);
+  kept as findings (`cnn_introspection_findings.md`), not a paper. A broader "role of structure"
+  survey (Tracks 3+6+8+9c) remains a possible future consolidation.
 
 ## What is intentionally NOT being done
 - No third paper from Tracks 1–3/7 (supporting findings, not standalone-paper-worthy).
