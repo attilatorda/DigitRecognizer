@@ -134,6 +134,21 @@ buys, readable here, is (i) depth that forms clean class prototypes and (ii) thr
 sub-models whose templates differ — the basis of the ensemble. Figure:
 `figures/fig_track8_receptive_fields.png`. Reproduce: `scripts/run_track8_introspect_best.py`.
 
+## Finding 8 — depth past the linear-separability knee buys robustness, not accuracy (JUSTIFIED)
+
+Answering the question "if no XOR-like work remains, would fewer layers do?" concretely, via a
+depth ablation (CNNs of $1$–$8$ conv blocks, 3 seeds) plus a per-layer linear probe on the
+deepest net. **Clean accuracy and per-layer linear separability both saturate by $\sim\!4$
+blocks**: clean accuracy moves only $99.06\to99.27$ from block 3 to 8, and a *linear* probe
+already reaches $99.1\%$ by block 4 (of a final $99.5\%$) — the representation is linearly
+separable, so no non-linear ("XOR-like") classification work remains beyond block 4. **But
+translation robustness keeps climbing well past the knee**: acc@4px $=91.5$ (d3) $\to 95.5$ (d4)
+$\to 98.5$ (d8). \textbf{Feedback rule:} for clean MNIST accuracy $\sim\!4$ blocks suffice
+(deeper is wasted capacity); if invariance/robustness matters, extra depth keeps paying. This
+ties directly to Finding 6 — robustness, not clean accuracy, is what added capacity buys.
+Figure: `figures/fig_track8_depth.png`; raw: `track8_depth_results.json`. Reproduce:
+`scripts/run_track8_depth.py`.
+
 ## Future ideas (not yet run)
 
 1. **Auxiliary sub-class head (most promising).** Multi-task CNN: shared backbone, a 10-way
