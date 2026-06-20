@@ -108,6 +108,32 @@ unit solves the linearly separable gates (AND/OR/NAND/NOR at 100%) but **cannot 
 MNIST CNN would be approximate (not pursued). Figure: `figures/fig_track8_logic.png`; raw:
 `track8_logic_results.json`. Reproduce: `scripts/run_logic_extraction.py`.
 
+## Finding 6 — model differences encode INVARIANCE, read from robustness not accuracy (JUSTIFIED)
+
+A panel of three classifiers with increasing spatial structure — an MLP, the 2-conv SimpleCNN,
+and the An et al.\ record-holder single model (M3) — spans only **1.4 pp on clean MNIST**
+($98.08 / 99.12 / 99.47$, 3 seeds) yet diverges by **~46 pp under a 4-pixel translation**
+($39.7 / 71.7 / 85.8$): the architectural gap is an *invariance* gap nearly invisible on clean
+data. The ordering MLP $\ll$ SimpleCNN $\ll$ record-M3 holds for both translation and rotation.
+So "model A beats model B" is best read not from clean accuracy but from **perturbation
+robustness**, which exposes what each architecture computes (translation tolerance from the
+convolutional prior; more from depth/no-pooling). **Honest null:** an unsupervised style-variant
+probe (crossed-7) reaches ~80% on all three representations (base 57%), so structure preservation
+is architecture-independent — the discriminating axis is robustness, not representation richness.
+Figure: `figures/fig_track8_panel_robust.png`; raw: `track8_panel_results.json`. Reproduce:
+`scripts/run_track8_model_panel.py`.
+
+## Finding 7 — depth (not kernel size) builds clean internal class prototypes (JUSTIFIED, qualitative)
+
+Activation-maximizing each class for the shallow SimpleCNN vs.\ the record holder's deep M3/M5/M7
+sub-models shows the deep models render **smooth, prototype-like canonical digits** (mean total
+variation $\sim\!0.08$) where the shallow CNN renders **high-frequency texture** that barely
+resembles a digit (TV $\sim\!0.5$). The hypothesized "different receptive-field scales" story is
+**not** supported — smoothness tracks *depth*, not kernel size. What the record holder's design
+buys, readable here, is (i) depth that forms clean class prototypes and (ii) three decorrelated
+sub-models whose templates differ — the basis of the ensemble. Figure:
+`figures/fig_track8_receptive_fields.png`. Reproduce: `scripts/run_track8_introspect_best.py`.
+
 ## Future ideas (not yet run)
 
 1. **Auxiliary sub-class head (most promising).** Multi-task CNN: shared backbone, a 10-way
