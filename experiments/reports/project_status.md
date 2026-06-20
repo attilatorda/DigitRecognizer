@@ -62,16 +62,26 @@ Last updated after Track 9c (corruption robustness) was strengthened and Track 8
 - **Venue plan:** a negative-/surprising-results workshop (e.g. ICBINB) or general ML workshop; arXiv.
 - **Source numbers:** `skeleton_comparison.md` (3 seeds, `scripts/run_skeleton_experiment.py`).
 
-## Venue formats (all four target their venue's LaTeX template)
-- P1 → Elsevier `elsarticle` (Pattern Recognition Letters). P2, P3, P4 → NeurIPS style
+## Paper 5 — Reading invariance & capacity from digit networks (Track 8 interpretability)
+
+- **Source:** `track8_paper.tex` (**NeurIPS workshop format**, 4 pp, 0 undefined refs);
+  `track8_refs.bib`; figures `fig_track8_panel_robust/depth/receptive_fields.png`.
+- **Thesis:** on near-saturated MNIST, clean accuracy is the wrong lens. (1) Model differences are
+  *invariance* differences (1.4pp clean spread → 46pp under a 4px shift; F6). (2) Depth past the
+  per-layer linear-separability knee (~4 blocks) buys *robustness*, not accuracy (F8). (3) The net
+  carries decodable + generatively-steerable latent structure and depth yields clean prototypes
+  (F1/F4/F7). Unifying point: read networks by robustness + linear separability, not clean accuracy.
+- **Venue plan:** an interpretability / analysis-of-ML workshop; arXiv. Honest grade: workshop-tier
+  (tools individually known; value is the synthesis + digit framing + the actionable depth rule).
+- **Source numbers:** `track8_panel_results.json`, `track8_depth_results.json`,
+  `cnn_introspection_findings.md` (F1–F8). Scripts: `scripts/run_track8_*.py`.
+
+## Venue formats (all five target their venue's LaTeX template)
+- P1 → Elsevier `elsarticle` (Pattern Recognition Letters). P2, P3, P4, P5 → NeurIPS style
   (`neurips_2024.sty`, numbered natbib citations). All compile clean with 0 undefined refs.
 
-## Not pursued as standalone papers
-- Track 8 introspection (reconstruction/logic): parts are textbook (activation-max, XOR-from-MLP);
-  kept as findings (`cnn_introspection_findings.md`), not a paper. A broader "role of structure"
-  survey (Tracks 3+6+8+9c) remains a possible future consolidation.
-
 ## What is intentionally NOT being done
-- No third paper from Tracks 1–3/7 (supporting findings, not standalone-paper-worthy).
-- Track 8 auxiliary sub-class head left as documented future work.
+- No paper from Tracks 1–2/7 (supporting findings, not standalone-paper-worthy).
+- Track 8 auxiliary sub-class head, boolean-logic-in-real-nets (#3), introspection-augmentation (#5)
+  left as documented future work (the #3/#5 directions carry null-result risk).
 - No move to Omniglot/miniImageNet or new model families.

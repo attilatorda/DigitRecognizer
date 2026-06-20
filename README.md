@@ -339,6 +339,7 @@ Browse MNIST/`.npy` datasets, tag images, detect duplicates, view a paginated ga
 - **Paper 2 — Track 9c corruption robustness:** `track9c_paper_neurips.pdf` (**NeurIPS workshop format**, 6pp; arXiv variant `track9c_paper.pdf` IEEEtran) — [findings](experiments/reports/track9_findings.md)
 - **Paper 3 — MNIST data-efficiency benchmark (Tracks 9/9b):** `track9_benchmark_paper.pdf` (**NeurIPS workshop format**, 3pp) — honest benchmark + the held-out-split stacking pitfall
 - **Paper 4 — Skeletonization is lossy (Track 3, negative):** `skeleton_paper.pdf` (**NeurIPS workshop format**, 3pp) — topology-only trails raw pixels ~1pp; fusion/Hough don't recover it
+- **Paper 5 — Reading invariance & capacity from digit networks (Track 8):** `track8_paper.pdf` (**NeurIPS workshop format**, 4pp) — clean accuracy hides the architectural story; robustness + per-layer linear separability reveal it (F6/F8)
 - [Diffusion track status & results](experiments/reports/diffusion_track_status.md)
 - [Structural early findings](experiments/reports/structural_early_findings.md)
 - [CNN introspection / Track 8 (closed)](experiments/reports/cnn_introspection_findings.md)
