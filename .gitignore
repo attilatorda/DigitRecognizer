@@ -44,3 +44,4 @@ experiments/reports/*.fls
 experiments/reports/*.fdb_latexmk
 experiments/reports/*.synctex.gz
 kmnist_data/
+experiments/reports/arxiv/
